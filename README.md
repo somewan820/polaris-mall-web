@@ -2,7 +2,7 @@
 
 Language: English | [中文](README.zh-CN.md)
 
-`polaris-mall-web` contains the storefront shell baseline for W001-W004.
+`polaris-mall-web` contains the storefront shell baseline for W001-W005.
 
 ## Implemented In This Step
 
@@ -26,6 +26,10 @@ Language: English | [中文](README.zh-CN.md)
   - checkout page supports submit order (`POST /api/v1/orders`) and payment creation (`POST /api/v1/payments/create`)
   - payment page supports mock success/failure callback and retry entry
   - payment result page supports success/failure state rendering and retry navigation
+- W005 account order center pages:
+  - order list page supports status filter and pagination
+  - order detail page shows item lines and shipment status
+  - refund apply form and refund status display are available on order detail
 - starter pages:
   - home
   - product list (`/products`)
@@ -34,6 +38,8 @@ Language: English | [中文](README.zh-CN.md)
   - checkout (`/checkout`)
   - payment (`/payments/:orderId`)
   - payment result (`/payment-result/:orderId`)
+  - order list (`/orders`)
+  - order detail (`/orders/:id`)
   - login/register
   - account profile
   - admin probe
@@ -70,6 +76,7 @@ node .\tests\router_guard_test.js
 node .\tests\catalog_logic_test.js
 node .\tests\checkout_payload_test.js
 node .\tests\payment_logic_test.js
+node .\tests\order_center_logic_test.js
 ```
 
 ## CI/CD Gate

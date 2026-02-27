@@ -192,6 +192,64 @@
     return "pending";
   }
 
+  function normalizeOrderItems(items) {
+    var source = Array.isArray(items) ? items : [];
+    var result = [];
+    for (var i = 0; i < source.length; i += 1) {
+      var raw = source[i] || {};
+      var lines = Array.isArray(raw.items) ? raw.items : [];
+      result.push({
+        id: String(raw.id || ""),
+        status: String(raw.status || ""),
+        totalCents: toNumber(raw.total_cents),
+        items: lines,
+        createdAt: String(raw.created_at || ""),
+        updatedAt: String(raw.updated_at || ""),
+      });
+    }
+    return result;
+  }
+
+  function filterOrdersByStatus(items, status) {
+    var list = Array.isArray(items) ? items.slice() : [];
+    var mode = String(status || "all");
+    if (mode === "all") {
+      return list;
+    }
+    return list.filter(function (item) {
+      return String(item.status || "") === mode;
+    });
+  }
+
+  function paginateList(items, page, pageSize) {
+    var size = toNumber(pageSize);
+    if (size <= 0) {
+      size = 8;
+    }
+    var totalItems = items.length;
+    var totalPages = Math.max(1, Math.ceil(totalItems / size));
+    var current = toNumber(page);
+    if (current <= 0) {
+      current = 1;
+    }
+    if (current > totalPages) {
+      current = totalPages;
+    }
+    var start = (current - 1) * size;
+    return {
+      items: items.slice(start, start + size),
+      page: current,
+      totalPages: totalPages,
+      totalItems: totalItems,
+      pageSize: size,
+    };
+  }
+
+  function isRefundableOrderStatus(status) {
+    var normalized = String(status || "").toLowerCase();
+    return normalized === "paid" || normalized === "shipped" || normalized === "done";
+  }
+
   function encodeHex(bytes) {
     var output = [];
     for (var i = 0; i < bytes.length; i += 1) {
@@ -271,13 +329,14 @@
     context.mount.innerHTML =
       '<div class="card">' +
       "<h2>欢迎来到 Polaris Mall</h2>" +
-      '<p class="text-muted">当前前端已完成路由、会话、权限守卫、商品浏览、购物车与下单支付流程能力（W004）。</p>' +
+      '<p class="text-muted">当前前端已完成路由、会话、权限守卫、商品浏览、购物车、下单支付与用户订单中心能力（W005）。</p>' +
       "<ul>" +
       "<li>商品页支持筛选、排序、分页与加入购物车</li>" +
       "<li>购物车页支持修改数量、删除与汇总金额展示</li>" +
       "<li>结算页支持地址选择与价格试算（接入 /api/v1/checkout/preview）</li>" +
       "<li>可从结算页提交订单，进入支付页模拟成功/失败并查看结果页</li>" +
-      "<li>未登录访问 <code>/cart</code> 与 <code>/checkout</code> 会跳转到登录页</li>" +
+      "<li>用户中心支持订单历史筛选分页、订单详情物流与退款申请展示</li>" +
+      "<li>未登录访问 <code>/cart</code>、<code>/checkout</code>、<code>/orders</code> 会跳转到登录页</li>" +
       "</ul>" +
       "</div>";
   }
@@ -1005,6 +1064,281 @@
     loadResult();
   }
 
+  function renderOrders(context) {
+    context.mount.innerHTML =
+      '<div class="card">' +
+      "<h2>我的订单</h2>" +
+      '<p id="orders-msg" class="text-muted">加载中...</p>' +
+      '<div class="catalog-controls">' +
+      '<select id="orders-status">' +
+      '<option value="all">全部状态</option>' +
+      '<option value="pending_payment">待支付</option>' +
+      '<option value="paid">已支付</option>' +
+      '<option value="shipped">已发货</option>' +
+      '<option value="done">已完成</option>' +
+      '<option value="canceled">已取消</option>' +
+      "</select>" +
+      "</div>" +
+      '<div id="orders-list"></div>' +
+      '<div id="orders-pager" class="row" hidden>' +
+      '<button id="orders-prev" type="button">上一页</button>' +
+      '<button id="orders-next" type="button">下一页</button>' +
+      "</div>" +
+      "</div>";
+
+    var msg = context.mount.querySelector("#orders-msg");
+    var statusSelect = context.mount.querySelector("#orders-status");
+    var list = context.mount.querySelector("#orders-list");
+    var pager = context.mount.querySelector("#orders-pager");
+    var prev = context.mount.querySelector("#orders-prev");
+    var next = context.mount.querySelector("#orders-next");
+    var orders = [];
+    var page = 1;
+    var pageSize = 6;
+
+    function renderList() {
+      var filtered = filterOrdersByStatus(orders, statusSelect.value);
+      var pageData = paginateList(filtered, page, pageSize);
+      page = pageData.page;
+
+      msg.textContent =
+        "共 " +
+        filtered.length +
+        " 笔订单，第 " +
+        pageData.page +
+        "/" +
+        pageData.totalPages +
+        " 页";
+
+      if (!filtered.length) {
+        list.innerHTML = '<p class="text-muted">暂无符合条件的订单。</p>';
+      } else {
+        var html = [];
+        html.push('<table class="cart-table"><thead><tr><th>订单号</th><th>状态</th><th>金额</th><th>更新时间</th><th>操作</th></tr></thead><tbody>');
+        for (var i = 0; i < pageData.items.length; i += 1) {
+          var item = pageData.items[i];
+          html.push(
+            "<tr>" +
+              "<td>" +
+              esc(item.id) +
+              "</td>" +
+              "<td>" +
+              esc(item.status) +
+              "</td>" +
+              "<td>" +
+              formatPrice(item.totalCents) +
+              "</td>" +
+              "<td>" +
+              esc(item.updatedAt || "-") +
+              "</td>" +
+              "<td>" +
+              '<button type="button" data-order-detail-id="' +
+              esc(item.id) +
+              '">查看详情</button>' +
+              "</td>" +
+              "</tr>"
+          );
+        }
+        html.push("</tbody></table>");
+        list.innerHTML = html.join("");
+
+        var detailButtons = list.querySelectorAll("[data-order-detail-id]");
+        for (var j = 0; j < detailButtons.length; j += 1) {
+          detailButtons[j].addEventListener("click", function (event) {
+            var id = event.currentTarget.getAttribute("data-order-detail-id");
+            context.navigate("/orders/" + id);
+          });
+        }
+      }
+
+      pager.hidden = filtered.length <= pageSize;
+      prev.disabled = pageData.page <= 1;
+      next.disabled = pageData.page >= pageData.totalPages;
+    }
+
+    statusSelect.addEventListener("change", function () {
+      page = 1;
+      renderList();
+    });
+    prev.addEventListener("click", function () {
+      page -= 1;
+      renderList();
+    });
+    next.addEventListener("click", function () {
+      page += 1;
+      renderList();
+    });
+
+    context.api
+      .listOrders()
+      .then(function (payload) {
+        orders = normalizeOrderItems(payload.items || []);
+        renderList();
+      })
+      .catch(function (err) {
+        msg.className = "text-danger";
+        msg.textContent = err.message || "加载订单列表失败";
+        list.innerHTML = "";
+      });
+  }
+
+  function renderOrderDetail(context) {
+    var orderID = context.params.id;
+    context.mount.innerHTML =
+      '<div class="card">' +
+      "<h2>订单详情</h2>" +
+      '<p id="order-detail-msg" class="text-muted">加载中...</p>' +
+      '<div id="order-detail-body"></div>' +
+      "</div>";
+
+    var msg = context.mount.querySelector("#order-detail-msg");
+    var body = context.mount.querySelector("#order-detail-body");
+
+    function loadTrackingWithFallback() {
+      return context.api.getOrderTracking(orderID).catch(function (err) {
+        if (err && err.status === 404) {
+          return { shipment: null };
+        }
+        throw err;
+      });
+    }
+
+    function loadRefundWithFallback() {
+      return context.api.getRefund(orderID).catch(function (err) {
+        if (err && err.status === 404) {
+          return { refund: null };
+        }
+        throw err;
+      });
+    }
+
+    function renderDetail(order, shipment, refund) {
+      var lines = Array.isArray(order.items) ? order.items : [];
+      var html = [];
+      html.push('<div class="checkout-panel">');
+      html.push("<p>订单号: " + esc(order.id) + "</p>");
+      html.push("<p>订单状态: " + esc(order.status) + "</p>");
+      html.push("<p>创建时间: " + esc(order.created_at || "-") + "</p>");
+      html.push("<p>更新时间: " + esc(order.updated_at || "-") + "</p>");
+      html.push("<p>订单总额: " + formatPrice(order.total_cents) + "</p>");
+      html.push("</div>");
+
+      html.push('<div class="checkout-panel">');
+      html.push("<h3>商品明细</h3>");
+      if (!lines.length) {
+        html.push('<p class="text-muted">暂无商品明细。</p>');
+      } else {
+        html.push('<table class="cart-table"><thead><tr><th>商品</th><th>单价</th><th>数量</th><th>小计</th></tr></thead><tbody>');
+        for (var i = 0; i < lines.length; i += 1) {
+          var line = lines[i];
+          html.push(
+            "<tr>" +
+              "<td>" +
+              esc(line.name) +
+              "</td>" +
+              "<td>" +
+              formatPrice(line.price_cents) +
+              "</td>" +
+              "<td>" +
+              esc(line.quantity) +
+              "</td>" +
+              "<td>" +
+              formatPrice(line.line_total_cents) +
+              "</td>" +
+              "</tr>"
+          );
+        }
+        html.push("</tbody></table>");
+      }
+      html.push("</div>");
+
+      html.push('<div class="checkout-panel">');
+      html.push("<h3>物流轨迹</h3>");
+      if (!shipment) {
+        html.push('<p class="text-muted">当前暂无物流信息。</p>');
+      } else {
+        html.push("<p>物流状态: " + esc(shipment.status) + "</p>");
+        html.push("<p>承运商: " + esc(shipment.carrier) + "</p>");
+        html.push("<p>运单号: " + esc(shipment.tracking_no) + "</p>");
+        html.push("<p>发货时间: " + esc(shipment.shipped_at || "-") + "</p>");
+        html.push("<p>签收时间: " + esc(shipment.delivered_at || "-") + "</p>");
+      }
+      html.push("</div>");
+
+      html.push('<div class="checkout-panel">');
+      html.push("<h3>退款信息</h3>");
+      if (refund) {
+        html.push("<p>退款单号: " + esc(refund.id) + "</p>");
+        html.push("<p>退款状态: " + esc(refund.status) + "</p>");
+        html.push("<p>退款金额: " + formatPrice(refund.amount_cents) + "</p>");
+        html.push("<p>退款原因: " + esc(refund.reason) + "</p>");
+      } else if (isRefundableOrderStatus(order.status)) {
+        html.push('<label class="label">退款金额（分，留空按全额）</label>');
+        html.push('<input id="refund-amount" type="number" min="0" value="" placeholder="例如 1000" />');
+        html.push('<label class="label">退款原因</label>');
+        html.push('<input id="refund-reason" type="text" value="buyer_request" />');
+        html.push('<button id="refund-submit" class="btn-primary" type="button">提交退款申请</button>');
+      } else {
+        html.push('<p class="text-muted">当前订单状态不支持退款申请。</p>');
+      }
+      html.push("</div>");
+
+      html.push('<div class="row"><button id="order-back" type="button">返回订单列表</button></div>');
+      body.innerHTML = html.join("");
+
+      var backButton = body.querySelector("#order-back");
+      if (backButton) {
+        backButton.addEventListener("click", function () {
+          context.navigate("/orders");
+        });
+      }
+
+      var refundButton = body.querySelector("#refund-submit");
+      if (refundButton) {
+        refundButton.addEventListener("click", function () {
+          var amountInput = body.querySelector("#refund-amount");
+          var reasonInput = body.querySelector("#refund-reason");
+          var amount = toNonNegativeInt(amountInput && amountInput.value);
+          var reason = reasonInput ? String(reasonInput.value || "").trim() : "";
+
+          msg.className = "text-muted";
+          msg.textContent = "提交退款申请中...";
+          context.api
+            .requestRefund(orderID, {
+              amount_cents: amount,
+              reason: reason,
+            })
+            .then(function () {
+              msg.className = "text-muted";
+              msg.textContent = "退款申请已提交。";
+              loadDetail();
+            })
+            .catch(function (err) {
+              msg.className = "text-danger";
+              msg.textContent = err.message || "退款申请失败";
+            });
+        });
+      }
+    }
+
+    function loadDetail() {
+      msg.className = "text-muted";
+      msg.textContent = "加载中...";
+      Promise.all([context.api.getOrder(orderID), loadTrackingWithFallback(), loadRefundWithFallback()])
+        .then(function (parts) {
+          renderDetail(parts[0].order || {}, parts[1].shipment || null, parts[2].refund || null);
+          msg.textContent = "订单信息已加载。";
+        })
+        .catch(function (err) {
+          msg.className = "text-danger";
+          msg.textContent = err.message || "加载订单详情失败";
+          body.innerHTML = "";
+        });
+    }
+
+    loadDetail();
+  }
+
   function renderLogin(context) {
     context.mount.innerHTML =
       '<div class="card">' +
@@ -1171,6 +1505,8 @@
     checkout: renderCheckout,
     payment: renderPayment,
     paymentResult: renderPaymentResult,
+    orders: renderOrders,
+    orderDetail: renderOrderDetail,
     login: renderLogin,
     account: renderAccount,
     admin: renderAdmin,
@@ -1185,5 +1521,9 @@
     buildCheckoutPreviewInput: buildCheckoutPreviewInput,
     createMockpayCallbackPayload: createMockpayCallbackPayload,
     derivePaymentOutcome: derivePaymentOutcome,
+    normalizeOrderItems: normalizeOrderItems,
+    filterOrdersByStatus: filterOrdersByStatus,
+    paginateList: paginateList,
+    isRefundableOrderStatus: isRefundableOrderStatus,
   };
 })(window);

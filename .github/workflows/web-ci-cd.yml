@@ -68,6 +68,20 @@ jobs:
       - name: Run Payment Logic Test
         run: node tests/payment_logic_test.js
 
+  order-center-logic-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run Order Center Logic Test
+        run: node tests/order_center_logic_test.js
+
   gate:
     runs-on: ubuntu-latest
     if: always()
@@ -76,6 +90,7 @@ jobs:
       - catalog-logic-test
       - checkout-payload-test
       - payment-logic-test
+      - order-center-logic-test
     steps:
       - name: Enforce Gate
         run: |
@@ -83,7 +98,8 @@ jobs:
           if [[ "${{ needs.router-guard-test.result }}" != "success" || \
                 "${{ needs.catalog-logic-test.result }}" != "success" || \
                 "${{ needs.checkout-payload-test.result }}" != "success" || \
-                "${{ needs.payment-logic-test.result }}" != "success" ]]; then
+                "${{ needs.payment-logic-test.result }}" != "success" || \
+                "${{ needs.order-center-logic-test.result }}" != "success" ]]; then
             echo "Gate failed."
             exit 1
           fi

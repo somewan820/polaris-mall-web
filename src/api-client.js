@@ -174,6 +174,25 @@
       });
     }
 
+    function getOrderTracking(orderID) {
+      return request("/api/v1/orders/" + encodeURIComponent(orderID) + "/tracking", {
+        method: "GET",
+      });
+    }
+
+    function requestRefund(orderID, input) {
+      return request("/api/v1/orders/" + encodeURIComponent(orderID) + "/refunds", {
+        method: "POST",
+        body: input || {},
+      });
+    }
+
+    function getRefund(orderID) {
+      return request("/api/v1/orders/" + encodeURIComponent(orderID) + "/refunds", {
+        method: "GET",
+      });
+    }
+
     return {
       request: request,
       register: register,
@@ -192,6 +211,9 @@
       createPayment: createPayment,
       getPaymentByOrder: getPaymentByOrder,
       mockpayCallback: mockpayCallback,
+      getOrderTracking: getOrderTracking,
+      requestRefund: requestRefund,
+      getRefund: getRefund,
     };
   }
 

@@ -18,3 +18,7 @@
 - type: feature_pass
 - note: Marked W004 as passing. Evidence: 已实现下单支付流程：结算页提交订单并创建支付单，新增支付页支持 mock 成功/失败回调与重试，新增支付结果页；四组前端测试全部通过。
 
+## 2026-02-27T11:01:13Z
+- type: feature_pass
+- note: Marked W005 as passing. Evidence: 已实现用户中心订单能力：订单列表支持状态筛选与分页，订单详情展示商品与物流，支持退款申请与退款状态展示；5组前端测试全部通过。
+

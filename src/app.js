@@ -37,6 +37,7 @@
       html.push(navLink("/login", "登录", activePath));
     } else {
       html.push(navLink("/cart", "购物车", activePath));
+      html.push(navLink("/orders", "订单", activePath));
       html.push(navLink("/account", "账号", activePath));
       if (session.user && session.user.role === "admin") {
         html.push(navLink("/admin", "管理探针", activePath));
@@ -105,6 +106,14 @@
     "/payment-result/:orderId": {
       requiresAuth: true,
       render: Polaris.views.paymentResult,
+    },
+    "/orders": {
+      requiresAuth: true,
+      render: Polaris.views.orders,
+    },
+    "/orders/:id": {
+      requiresAuth: true,
+      render: Polaris.views.orderDetail,
     },
     "/account": {
       requiresAuth: true,
