@@ -14,3 +14,7 @@
 - type: feature_pass
 - note: Marked W003 as passing. Evidence: 已实现购物车与结算预览页面：支持加入购物车、数量调整、删除、金额汇总与试算，router_guard_test/catalog_logic_test/checkout_payload_test 全部通过。
 
+## 2026-02-27T10:49:35Z
+- type: feature_pass
+- note: Marked W004 as passing. Evidence: 已实现下单支付流程：结算页提交订单并创建支付单，新增支付页支持 mock 成功/失败回调与重试，新增支付结果页；四组前端测试全部通过。
+

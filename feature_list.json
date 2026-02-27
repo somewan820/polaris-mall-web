@@ -40,9 +40,9 @@
       "Allow address selection before placing order"
     ],
     "passes": true,
-    "notes": "\u9a8c\u6536\u8def\u5f84\uff1a\u5546\u54c1\u5217\u8868\u6216\u8be6\u60c5\u52a0\u5165\u8d2d\u7269\u8f66 -> /cart \u8c03\u6574\u6570\u91cf\u6216\u5220\u9664 -> /checkout \u8bd5\u7b97\u91d1\u989d\u5e76\u8fd4\u56de pricing \u4e0e trace_id\u3002",
     "evidence": "\u5df2\u5b9e\u73b0\u8d2d\u7269\u8f66\u4e0e\u7ed3\u7b97\u9884\u89c8\u9875\u9762\uff1a\u652f\u6301\u52a0\u5165\u8d2d\u7269\u8f66\u3001\u6570\u91cf\u8c03\u6574\u3001\u5220\u9664\u3001\u91d1\u989d\u6c47\u603b\u4e0e\u8bd5\u7b97\uff0crouter_guard_test/catalog_logic_test/checkout_payload_test \u5168\u90e8\u901a\u8fc7\u3002",
-    "updated_at": "2026-02-27T09:43:14Z"
+    "updated_at": "2026-02-27T09:43:14Z",
+    "notes": "\u9a8c\u6536\u8def\u5f84\uff1a\u5546\u54c1\u5217\u8868\u6216\u8be6\u60c5\u52a0\u5165\u8d2d\u7269\u8f66 -> /cart \u8c03\u6574\u6570\u91cf\u6216\u5220\u9664 -> /checkout \u8bd5\u7b97\u91d1\u989d\u5e76\u8fd4\u56de pricing \u4e0e trace_id\u3002"
   },
   {
     "id": "W004",
@@ -54,8 +54,10 @@
       "Display payment redirect or QR flow",
       "Render success and failure status pages with retry entry"
     ],
-    "passes": false,
-    "notes": "Acceptance: shopper can place an order and see payment outcome. Dependencies: W003, A005, A006."
+    "passes": true,
+    "notes": "\u9a8c\u6536\u8def\u5f84\uff1a/checkout \u63d0\u4ea4\u8ba2\u5355 -> /payments/{orderId} \u6a21\u62df\u652f\u4ed8\u6210\u529f/\u5931\u8d25 -> /payment-result/{orderId} \u67e5\u770b\u7ed3\u679c\u5e76\u53ef\u5931\u8d25\u91cd\u8bd5\u3002",
+    "evidence": "\u5df2\u5b9e\u73b0\u4e0b\u5355\u652f\u4ed8\u6d41\u7a0b\uff1a\u7ed3\u7b97\u9875\u63d0\u4ea4\u8ba2\u5355\u5e76\u521b\u5efa\u652f\u4ed8\u5355\uff0c\u65b0\u589e\u652f\u4ed8\u9875\u652f\u6301 mock \u6210\u529f/\u5931\u8d25\u56de\u8c03\u4e0e\u91cd\u8bd5\uff0c\u65b0\u589e\u652f\u4ed8\u7ed3\u679c\u9875\uff1b\u56db\u7ec4\u524d\u7aef\u6d4b\u8bd5\u5168\u90e8\u901a\u8fc7\u3002",
+    "updated_at": "2026-02-27T10:49:35Z"
   },
   {
     "id": "W005",

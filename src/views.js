@@ -172,6 +172,56 @@
     };
   }
 
+  function createMockpayCallbackPayload(orderID, result) {
+    return {
+      order_id: String(orderID || "").trim(),
+      external_txn_id: "txn-web-" + String(Date.now()),
+      result: String(result || "").trim().toLowerCase(),
+    };
+  }
+
+  function derivePaymentOutcome(orderStatus, paymentStatus) {
+    var order = String(orderStatus || "").toLowerCase();
+    var payment = String(paymentStatus || "").toLowerCase();
+    if (payment === "succeeded" || order === "paid" || order === "shipped" || order === "done") {
+      return "success";
+    }
+    if (payment === "failed" || order === "canceled") {
+      return "failed";
+    }
+    return "pending";
+  }
+
+  function encodeHex(bytes) {
+    var output = [];
+    for (var i = 0; i < bytes.length; i += 1) {
+      var value = bytes[i].toString(16);
+      if (value.length === 1) {
+        value = "0" + value;
+      }
+      output.push(value);
+    }
+    return output.join("");
+  }
+
+  function signMockpayPayload(secret, payloadJSON) {
+    if (!global.crypto || !global.crypto.subtle || typeof global.TextEncoder !== "function") {
+      return Promise.reject(new Error("当前环境不支持 mockpay 回调签名"));
+    }
+    var encoder = new global.TextEncoder();
+    var keyData = encoder.encode(String(secret || ""));
+    var payloadData = encoder.encode(String(payloadJSON || ""));
+
+    return global.crypto.subtle
+      .importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
+      .then(function (key) {
+        return global.crypto.subtle.sign("HMAC", key, payloadData);
+      })
+      .then(function (buffer) {
+        return encodeHex(new Uint8Array(buffer));
+      });
+  }
+
   function buildCatalogCard(item, canAdd) {
     var stockClass = "stock-" + stockState(item.stock);
     var addButton = "";
@@ -221,11 +271,12 @@
     context.mount.innerHTML =
       '<div class="card">' +
       "<h2>欢迎来到 Polaris Mall</h2>" +
-      '<p class="text-muted">当前前端已完成路由、会话、权限守卫、商品浏览与购物车结算预览能力（W003）。</p>' +
+      '<p class="text-muted">当前前端已完成路由、会话、权限守卫、商品浏览、购物车与下单支付流程能力（W004）。</p>' +
       "<ul>" +
       "<li>商品页支持筛选、排序、分页与加入购物车</li>" +
       "<li>购物车页支持修改数量、删除与汇总金额展示</li>" +
       "<li>结算页支持地址选择与价格试算（接入 /api/v1/checkout/preview）</li>" +
+      "<li>可从结算页提交订单，进入支付页模拟成功/失败并查看结果页</li>" +
       "<li>未登录访问 <code>/cart</code> 与 <code>/checkout</code> 会跳转到登录页</li>" +
       "</ul>" +
       "</div>";
@@ -635,7 +686,10 @@
         '<input id="checkout-discount" type="number" min="0" value="0" />' +
         '<label class="label">优惠码</label>' +
         '<input id="checkout-coupon" type="text" value="" placeholder="可选" />' +
+        '<div class="row">' +
         '<button id="checkout-preview" class="btn-primary" type="button">试算金额</button>' +
+        '<button id="checkout-submit-order" type="button">提交订单并支付</button>' +
+        "</div>" +
         '<div id="checkout-result" class="card"></div>' +
         "</div>";
 
@@ -692,6 +746,27 @@
           });
       });
 
+      body.querySelector("#checkout-submit-order").addEventListener("click", function () {
+        msg.className = "text-muted";
+        msg.textContent = "提交订单中...";
+        context.api
+          .createOrder({})
+          .then(function (orderPayload) {
+            var order = orderPayload.order || {};
+            if (!order.id) {
+              throw new Error("订单创建成功但未返回订单号");
+            }
+            msg.textContent = "订单已创建，正在发起支付...";
+            return context.api.createPayment(order.id, "mockpay").then(function () {
+              context.navigate("/payments/" + order.id);
+            });
+          })
+          .catch(function (err) {
+            msg.className = "text-danger";
+            msg.textContent = err.message || "提交订单失败";
+          });
+      });
+
       msg.textContent = "请确认地址与费用参数。";
     }
 
@@ -703,6 +778,231 @@
         msg.textContent = err.message || "加载结算信息失败";
         body.innerHTML = "";
       });
+  }
+
+  function renderPayment(context) {
+    var orderID = context.params.orderId;
+    var callbackSecret = global.POLARIS_MOCKPAY_CALLBACK_SECRET || "dev-pay-callback-secret";
+
+    context.mount.innerHTML =
+      '<div class="card">' +
+      "<h2>支付页面</h2>" +
+      '<p id="payment-msg" class="text-muted">加载中...</p>' +
+      '<div id="payment-body"></div>' +
+      "</div>";
+    var msg = context.mount.querySelector("#payment-msg");
+    var body = context.mount.querySelector("#payment-body");
+
+    function loadPaymentWithFallback() {
+      return context.api.getPaymentByOrder(orderID).catch(function (err) {
+        if (err && err.status === 404) {
+          return { payment: null };
+        }
+        throw err;
+      });
+    }
+
+    function renderPaymentBody(order, payment) {
+      var orderStatus = order && order.status;
+      var paymentStatus = payment && payment.status;
+      var outcome = derivePaymentOutcome(orderStatus, paymentStatus);
+
+      var html = [];
+      html.push('<div class="checkout-panel">');
+      html.push("<p>订单号: " + esc(orderID) + "</p>");
+      html.push("<p>订单状态: " + esc(orderStatus || "-") + "</p>");
+      html.push("<p>支付单号: " + esc((payment && payment.id) || "-") + "</p>");
+      html.push("<p>支付状态: " + esc(paymentStatus || "pending") + "</p>");
+      html.push("<p>应付金额: " + formatPrice((order && order.total_cents) || 0) + "</p>");
+      html.push('<div class="row">');
+      html.push('<button id="payment-refresh" type="button">刷新状态</button>');
+      if (outcome === "pending") {
+        html.push('<button id="payment-success" class="btn-primary" type="button">模拟支付成功</button>');
+        html.push('<button id="payment-failed" type="button">模拟支付失败</button>');
+      }
+      if (outcome === "failed") {
+        html.push('<button id="payment-retry" class="btn-primary" type="button">重试支付（模拟成功）</button>');
+      }
+      if (outcome === "success" || outcome === "failed") {
+        html.push('<button id="payment-result" type="button">查看支付结果页</button>');
+      }
+      html.push("</div>");
+      html.push("</div>");
+      body.innerHTML = html.join("");
+
+      var refresh = body.querySelector("#payment-refresh");
+      if (refresh) {
+        refresh.addEventListener("click", function () {
+          loadStatus(false);
+        });
+      }
+      var goResult = body.querySelector("#payment-result");
+      if (goResult) {
+        goResult.addEventListener("click", function () {
+          context.navigate("/payment-result/" + orderID);
+        });
+      }
+      var successButton = body.querySelector("#payment-success");
+      if (successButton) {
+        successButton.addEventListener("click", function () {
+          triggerMockpay("success");
+        });
+      }
+      var failedButton = body.querySelector("#payment-failed");
+      if (failedButton) {
+        failedButton.addEventListener("click", function () {
+          triggerMockpay("failed");
+        });
+      }
+      var retryButton = body.querySelector("#payment-retry");
+      if (retryButton) {
+        retryButton.addEventListener("click", function () {
+          triggerMockpay("success");
+        });
+      }
+    }
+
+    function loadStatus(navigateWhenDone) {
+      msg.className = "text-muted";
+      msg.textContent = "刷新支付状态中...";
+      Promise.all([context.api.getOrder(orderID), loadPaymentWithFallback()])
+        .then(function (parts) {
+          var order = parts[0].order || {};
+          var payment = parts[1].payment || null;
+          renderPaymentBody(order, payment);
+
+          var outcome = derivePaymentOutcome(order.status, payment && payment.status);
+          if (navigateWhenDone && outcome !== "pending") {
+            context.navigate("/payment-result/" + orderID);
+            return;
+          }
+          msg.textContent = "可继续支付或查看结果。";
+        })
+        .catch(function (err) {
+          msg.className = "text-danger";
+          msg.textContent = err.message || "加载支付状态失败";
+          body.innerHTML = "";
+        });
+    }
+
+    function triggerMockpay(result) {
+      var payload = createMockpayCallbackPayload(orderID, result);
+      var payloadJSON = JSON.stringify(payload);
+      msg.className = "text-muted";
+      msg.textContent = "模拟回调中...";
+      signMockpayPayload(callbackSecret, payloadJSON)
+        .then(function (signature) {
+          return context.api.mockpayCallback(payload, signature);
+        })
+        .then(function () {
+          loadStatus(true);
+        })
+        .catch(function (err) {
+          msg.className = "text-danger";
+          msg.textContent = err.message || "模拟支付回调失败";
+        });
+    }
+
+    loadStatus(false);
+  }
+
+  function renderPaymentResult(context) {
+    var orderID = context.params.orderId;
+    context.mount.innerHTML =
+      '<div class="card">' +
+      "<h2>支付结果</h2>" +
+      '<p id="payment-result-msg" class="text-muted">加载中...</p>' +
+      '<div id="payment-result-body"></div>' +
+      "</div>";
+
+    var msg = context.mount.querySelector("#payment-result-msg");
+    var body = context.mount.querySelector("#payment-result-body");
+
+    function loadPaymentWithFallback() {
+      return context.api.getPaymentByOrder(orderID).catch(function (err) {
+        if (err && err.status === 404) {
+          return { payment: null };
+        }
+        throw err;
+      });
+    }
+
+    function renderResult(order, payment) {
+      var outcome = derivePaymentOutcome(order && order.status, payment && payment.status);
+      var html = [];
+      html.push('<div class="checkout-panel">');
+      html.push("<p>订单号: " + esc(orderID) + "</p>");
+      html.push("<p>订单状态: " + esc((order && order.status) || "-") + "</p>");
+      html.push("<p>支付状态: " + esc((payment && payment.status) || "pending") + "</p>");
+      html.push("<p>应付金额: " + formatPrice((order && order.total_cents) || 0) + "</p>");
+
+      if (outcome === "success") {
+        html.push("<h3>支付成功</h3>");
+        html.push('<p class="text-muted">订单已进入已支付状态，可继续履约流程。</p>');
+        html.push('<div class="row"><button id="payment-result-account" class="btn-primary" type="button">进入账号中心</button></div>');
+        msg.textContent = "支付成功";
+        msg.className = "text-muted";
+      } else if (outcome === "failed") {
+        html.push("<h3>支付失败</h3>");
+        html.push('<p class="text-danger">支付未完成，可返回支付页重试。</p>');
+        html.push('<div class="row"><button id="payment-result-retry" class="btn-primary" type="button">返回支付页重试</button></div>');
+        msg.textContent = "支付失败";
+        msg.className = "text-danger";
+      } else {
+        html.push("<h3>支付处理中</h3>");
+        html.push('<p class="text-muted">支付状态仍在处理中，可稍后刷新或返回支付页。</p>');
+        html.push(
+          '<div class="row">' +
+            '<button id="payment-result-refresh" type="button">刷新状态</button>' +
+            '<button id="payment-result-back" class="btn-primary" type="button">返回支付页</button>' +
+            "</div>"
+        );
+        msg.textContent = "支付处理中";
+        msg.className = "text-muted";
+      }
+
+      html.push("</div>");
+      body.innerHTML = html.join("");
+
+      var toAccount = body.querySelector("#payment-result-account");
+      if (toAccount) {
+        toAccount.addEventListener("click", function () {
+          context.navigate("/account");
+        });
+      }
+      var retry = body.querySelector("#payment-result-retry");
+      if (retry) {
+        retry.addEventListener("click", function () {
+          context.navigate("/payments/" + orderID);
+        });
+      }
+      var refresh = body.querySelector("#payment-result-refresh");
+      if (refresh) {
+        refresh.addEventListener("click", loadResult);
+      }
+      var back = body.querySelector("#payment-result-back");
+      if (back) {
+        back.addEventListener("click", function () {
+          context.navigate("/payments/" + orderID);
+        });
+      }
+    }
+
+    function loadResult() {
+      msg.className = "text-muted";
+      msg.textContent = "加载中...";
+      Promise.all([context.api.getOrder(orderID), loadPaymentWithFallback()])
+        .then(function (parts) {
+          renderResult(parts[0].order || {}, parts[1].payment || null);
+        })
+        .catch(function (err) {
+          msg.className = "text-danger";
+          msg.textContent = err.message || "加载支付结果失败";
+          body.innerHTML = "";
+        });
+    }
+
+    loadResult();
   }
 
   function renderLogin(context) {
@@ -869,6 +1169,8 @@
     productDetail: renderProductDetail,
     cart: renderCart,
     checkout: renderCheckout,
+    payment: renderPayment,
+    paymentResult: renderPaymentResult,
     login: renderLogin,
     account: renderAccount,
     admin: renderAdmin,
@@ -881,5 +1183,7 @@
     stockState: stockState,
     stockStatusLabel: stockStatusLabel,
     buildCheckoutPreviewInput: buildCheckoutPreviewInput,
+    createMockpayCallbackPayload: createMockpayCallbackPayload,
+    derivePaymentOutcome: derivePaymentOutcome,
   };
 })(window);

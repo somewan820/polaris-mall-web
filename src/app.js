@@ -98,6 +98,14 @@
       requiresAuth: true,
       render: Polaris.views.checkout,
     },
+    "/payments/:orderId": {
+      requiresAuth: true,
+      render: Polaris.views.payment,
+    },
+    "/payment-result/:orderId": {
+      requiresAuth: true,
+      render: Polaris.views.paymentResult,
+    },
     "/account": {
       requiresAuth: true,
       render: Polaris.views.account,

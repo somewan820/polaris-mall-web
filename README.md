@@ -2,7 +2,7 @@
 
 Language: English | [中文](README.zh-CN.md)
 
-`polaris-mall-web` contains the storefront shell baseline for W001-W003.
+`polaris-mall-web` contains the storefront shell baseline for W001-W004.
 
 ## Implemented In This Step
 
@@ -22,12 +22,18 @@ Language: English | [中文](README.zh-CN.md)
   - cart page supports quantity update/remove and summary amount
   - checkout preview page supports address selection and pricing trial (`/api/v1/checkout/preview`)
   - `/cart` and `/checkout` routes require login
+- W004 order + payment flow pages:
+  - checkout page supports submit order (`POST /api/v1/orders`) and payment creation (`POST /api/v1/payments/create`)
+  - payment page supports mock success/failure callback and retry entry
+  - payment result page supports success/failure state rendering and retry navigation
 - starter pages:
   - home
   - product list (`/products`)
   - product detail (`/products/:id`)
   - cart (`/cart`)
   - checkout (`/checkout`)
+  - payment (`/payments/:orderId`)
+  - payment result (`/payment-result/:orderId`)
   - login/register
   - account profile
   - admin probe
@@ -51,12 +57,19 @@ If your API runs on a different host, set in browser console before refresh:
 window.POLARIS_API_BASE_URL = "http://127.0.0.1:9000";
 ```
 
+If callback secret differs from default `dev-pay-callback-secret`, set:
+
+```javascript
+window.POLARIS_MOCKPAY_CALLBACK_SECRET = "your-secret";
+```
+
 ## Quick Verification
 
 ```powershell
 node .\tests\router_guard_test.js
 node .\tests\catalog_logic_test.js
 node .\tests\checkout_payload_test.js
+node .\tests\payment_logic_test.js
 ```
 
 ## CI/CD Gate

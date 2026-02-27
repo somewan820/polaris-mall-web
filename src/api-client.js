@@ -134,6 +134,46 @@
       });
     }
 
+    function createOrder(input) {
+      return request("/api/v1/orders", {
+        method: "POST",
+        body: input || {},
+      });
+    }
+
+    function listOrders() {
+      return request("/api/v1/orders", { method: "GET" });
+    }
+
+    function getOrder(orderID) {
+      return request("/api/v1/orders/" + encodeURIComponent(orderID), { method: "GET" });
+    }
+
+    function createPayment(orderID, provider) {
+      return request("/api/v1/payments/create", {
+        method: "POST",
+        body: {
+          order_id: orderID,
+          provider: provider || "mockpay",
+        },
+      });
+    }
+
+    function getPaymentByOrder(orderID) {
+      return request("/api/v1/payments/order/" + encodeURIComponent(orderID), { method: "GET" });
+    }
+
+    function mockpayCallback(input, signature) {
+      return request("/api/v1/payments/callback/mockpay", {
+        method: "POST",
+        headers: {
+          "X-Mockpay-Signature": signature || "",
+          "Content-Type": "application/json",
+        },
+        body: input,
+      });
+    }
+
     return {
       request: request,
       register: register,
@@ -146,6 +186,12 @@
       updateCartItem: updateCartItem,
       removeCartItem: removeCartItem,
       checkoutPreview: checkoutPreview,
+      createOrder: createOrder,
+      listOrders: listOrders,
+      getOrder: getOrder,
+      createPayment: createPayment,
+      getPaymentByOrder: getPaymentByOrder,
+      mockpayCallback: mockpayCallback,
     };
   }
 

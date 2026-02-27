@@ -2,7 +2,7 @@
 
 语言：中文 | [English](README.md)
 
-`polaris-mall-web` 是 Polaris Mall 前端仓库，当前覆盖 W001-W003 能力。
+`polaris-mall-web` 是 Polaris Mall 前端仓库，当前覆盖 W001-W004 能力。
 
 ## 当前已实现
 
@@ -22,6 +22,10 @@
   - 购物车页支持数量更新、删除、金额汇总
   - 结算预览页支持地址选择与价格试算（`/api/v1/checkout/preview`）
   - `/cart`、`/checkout` 路由要求登录
+- W004 基线：
+  - 结算页支持提交订单（`POST /api/v1/orders`）并创建支付单（`POST /api/v1/payments/create`）
+  - 支付页支持 mock 成功/失败回调与失败重试入口
+  - 支付结果页支持成功/失败状态渲染与返回重试
 
 ## 本地运行
 
@@ -42,12 +46,19 @@ python -m SimpleHTTPServer 5173
 window.POLARIS_API_BASE_URL = "http://127.0.0.1:9000";
 ```
 
+如果回调密钥不是默认值 `dev-pay-callback-secret`，可设置：
+
+```javascript
+window.POLARIS_MOCKPAY_CALLBACK_SECRET = "your-secret";
+```
+
 ## 快速验证
 
 ```powershell
 node .\tests\router_guard_test.js
 node .\tests\catalog_logic_test.js
 node .\tests\checkout_payload_test.js
+node .\tests\payment_logic_test.js
 ```
 
 ## CI/CD Gate

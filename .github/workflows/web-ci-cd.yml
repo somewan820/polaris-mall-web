@@ -54,6 +54,20 @@ jobs:
       - name: Run Checkout Payload Test
         run: node tests/checkout_payload_test.js
 
+  payment-logic-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run Payment Logic Test
+        run: node tests/payment_logic_test.js
+
   gate:
     runs-on: ubuntu-latest
     if: always()
@@ -61,13 +75,15 @@ jobs:
       - router-guard-test
       - catalog-logic-test
       - checkout-payload-test
+      - payment-logic-test
     steps:
       - name: Enforce Gate
         run: |
           set -euo pipefail
           if [[ "${{ needs.router-guard-test.result }}" != "success" || \
                 "${{ needs.catalog-logic-test.result }}" != "success" || \
-                "${{ needs.checkout-payload-test.result }}" != "success" ]]; then
+                "${{ needs.checkout-payload-test.result }}" != "success" || \
+                "${{ needs.payment-logic-test.result }}" != "success" ]]; then
             echo "Gate failed."
             exit 1
           fi
