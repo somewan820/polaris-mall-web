@@ -1,0 +1,108 @@
+[
+  {
+    "category": "foundation", 
+    "passes": true, 
+    "description": "Build storefront shell with routing, session handling, and API client baseline", 
+    "notes": "Acceptance: app shell runs and protected routes enforce login. Dependencies: A001.", 
+    "updated_at": "2026-02-27T05:49:56Z", 
+    "evidence": "Implemented shell routes, session persistence, API client and route guards; router guard tests passed via node.", 
+    "priority": 1, 
+    "steps": [
+      "Define app layout and route skeleton", 
+      "Implement login state persistence and route guard", 
+      "Create shared API request wrapper and error normalization"
+    ], 
+    "id": "W001"
+  }, 
+  {
+    "category": "catalog", 
+    "passes": false, 
+    "description": "Implement product list, filter, sort, and product detail pages", 
+    "notes": "Acceptance: shopper can discover products and open detail page. Dependencies: W001, A002.", 
+    "priority": 2, 
+    "steps": [
+      "Render category and product listing with pagination", 
+      "Support basic filter and sort conditions", 
+      "Render product detail with price and stock status"
+    ], 
+    "id": "W002"
+  }, 
+  {
+    "category": "cart", 
+    "passes": false, 
+    "description": "Implement cart and checkout pages connected to server-side cart and pricing APIs", 
+    "notes": "Acceptance: shopper can reach checkout with accurate totals. Dependencies: W002, A003, A004.", 
+    "priority": 3, 
+    "steps": [
+      "Support add to cart and quantity adjustment", 
+      "Show per-item and aggregate pricing breakdown", 
+      "Allow address selection before placing order"
+    ], 
+    "id": "W003"
+  }, 
+  {
+    "category": "order", 
+    "passes": false, 
+    "description": "Implement order submit, payment initiation, and payment result flow", 
+    "notes": "Acceptance: shopper can place an order and see payment outcome. Dependencies: W003, A005, A006.", 
+    "priority": 4, 
+    "steps": [
+      "Create order submit action from checkout page", 
+      "Display payment redirect or QR flow", 
+      "Render success and failure status pages with retry entry"
+    ], 
+    "id": "W004"
+  }, 
+  {
+    "category": "account", 
+    "passes": false, 
+    "description": "Implement user center pages for order history, order detail, and refund requests", 
+    "notes": "Acceptance: user can self-serve order and refund queries. Dependencies: W004, A007.", 
+    "priority": 5, 
+    "steps": [
+      "Render paginated order list with status filters", 
+      "Render order detail with shipment and timeline", 
+      "Provide refund apply form and status display"
+    ], 
+    "id": "W005"
+  }, 
+  {
+    "category": "resilience", 
+    "passes": false, 
+    "description": "Implement robust loading, retry, and failure-state UX for critical checkout flows", 
+    "notes": "Acceptance: critical pages remain usable during transient API failures. Dependencies: W003, W004.", 
+    "priority": 6, 
+    "steps": [
+      "Add skeleton and pending states for async requests", 
+      "Add recoverable retry patterns for transient failures", 
+      "Provide actionable fallback UI for non-recoverable errors"
+    ], 
+    "id": "W006"
+  }, 
+  {
+    "category": "quality", 
+    "passes": false, 
+    "description": "Improve frontend performance and accessibility for the top purchase journey", 
+    "notes": "Acceptance: target page budgets and basic accessibility checks pass. Dependencies: W002, W003.", 
+    "priority": 7, 
+    "steps": [
+      "Measure and optimize first contentful render for home and detail pages", 
+      "Ensure keyboard navigation and form labels for checkout", 
+      "Add bundle and runtime budget checks"
+    ], 
+    "id": "W007"
+  }, 
+  {
+    "category": "verification", 
+    "passes": false, 
+    "description": "Add end-to-end smoke tests covering browse, add to cart, order submit, and order query", 
+    "notes": "Acceptance: one-click smoke suite validates MVP flow on each release candidate. Dependencies: W004, W005, I005.", 
+    "priority": 8, 
+    "steps": [
+      "Create test seed strategy for deterministic data", 
+      "Implement smoke scenarios for main customer journey", 
+      "Integrate smoke tests into CI gate"
+    ], 
+    "id": "W008"
+  }
+]
