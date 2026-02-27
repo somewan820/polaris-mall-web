@@ -22,3 +22,7 @@
 - type: feature_pass
 - note: Marked W005 as passing. Evidence: 已实现用户中心订单能力：订单列表支持状态筛选与分页，订单详情展示商品与物流，支持退款申请与退款状态展示；5组前端测试全部通过。
 
+## 2026-02-27T12:00:55Z
+- type: feature_pass
+- note: Marked W006 as passing. Evidence: 已增强关键结算链路容错：结算页/支付页/支付结果页新增加载骨架、瞬时失败重试与回退引导，6组前端测试全部通过。
+

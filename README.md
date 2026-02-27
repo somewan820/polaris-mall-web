@@ -2,7 +2,7 @@
 
 Language: English | [中文](README.zh-CN.md)
 
-`polaris-mall-web` contains the storefront shell baseline for W001-W005.
+`polaris-mall-web` contains the storefront shell baseline for W001-W006.
 
 ## Implemented In This Step
 
@@ -30,6 +30,10 @@ Language: English | [中文](README.zh-CN.md)
   - order list page supports status filter and pagination
   - order detail page shows item lines and shipment status
   - refund apply form and refund status display are available on order detail
+- W006 resilience UX for critical checkout flow:
+  - checkout/payment/result pages include loading skeleton state
+  - transient failures provide direct retry actions
+  - unrecoverable failures provide explicit fallback navigation
 - starter pages:
   - home
   - product list (`/products`)
@@ -77,6 +81,7 @@ node .\tests\catalog_logic_test.js
 node .\tests\checkout_payload_test.js
 node .\tests\payment_logic_test.js
 node .\tests\order_center_logic_test.js
+node .\tests\resilience_logic_test.js
 ```
 
 ## CI/CD Gate

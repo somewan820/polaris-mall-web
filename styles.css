@@ -247,6 +247,42 @@ button:disabled {
   margin: 8px 0;
 }
 
+.status-panel {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.status-panel .row {
+  margin-top: 10px;
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 37%, #e5e7eb 63%);
+  background-size: 400% 100%;
+  animation: skeleton-pulse 1.2s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+.skeleton-line.w-30 {
+  width: 30%;
+}
+
+.skeleton-line.w-50 {
+  width: 50%;
+}
+
+.skeleton-line.w-70 {
+  width: 70%;
+}
+
+.skeleton-line.w-90 {
+  width: 90%;
+}
+
 .text-muted {
   color: var(--muted);
 }
@@ -261,6 +297,15 @@ pre {
   border-radius: 8px;
   padding: 12px;
   background: #f8fafc;
+}
+
+@keyframes skeleton-pulse {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
 }
 
 @media (max-width: 720px) {

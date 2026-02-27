@@ -250,6 +250,17 @@
     return normalized === "paid" || normalized === "shipped" || normalized === "done";
   }
 
+  function isTransientError(err) {
+    if (!err) {
+      return true;
+    }
+    var status = toNumber(err.status);
+    if (!status) {
+      return true;
+    }
+    return status === 408 || status === 429 || status >= 500;
+  }
+
   function encodeHex(bytes) {
     var output = [];
     for (var i = 0; i < bytes.length; i += 1) {
@@ -329,13 +340,14 @@
     context.mount.innerHTML =
       '<div class="card">' +
       "<h2>欢迎来到 Polaris Mall</h2>" +
-      '<p class="text-muted">当前前端已完成路由、会话、权限守卫、商品浏览、购物车、下单支付与用户订单中心能力（W005）。</p>' +
+      '<p class="text-muted">当前前端已完成路由、会话、权限守卫、商品浏览、购物车、下单支付、订单中心及关键链路容错能力（W006）。</p>' +
       "<ul>" +
       "<li>商品页支持筛选、排序、分页与加入购物车</li>" +
       "<li>购物车页支持修改数量、删除与汇总金额展示</li>" +
       "<li>结算页支持地址选择与价格试算（接入 /api/v1/checkout/preview）</li>" +
       "<li>可从结算页提交订单，进入支付页模拟成功/失败并查看结果页</li>" +
       "<li>用户中心支持订单历史筛选分页、订单详情物流与退款申请展示</li>" +
+      "<li>结算与支付关键链路支持加载骨架、失败可重试与回退引导</li>" +
       "<li>未登录访问 <code>/cart</code>、<code>/checkout</code>、<code>/orders</code> 会跳转到登录页</li>" +
       "</ul>" +
       "</div>";
@@ -717,10 +729,46 @@
     var msg = context.mount.querySelector("#checkout-msg");
     var body = context.mount.querySelector("#checkout-body");
 
+    function renderSkeleton() {
+      body.innerHTML =
+        '<div class="checkout-panel">' +
+        '<div class="skeleton-line w-30"></div>' +
+        '<div class="skeleton-line w-90"></div>' +
+        '<div class="skeleton-line w-70"></div>' +
+        '<div class="skeleton-line w-50"></div>' +
+        "</div>";
+    }
+
     function renderEmpty() {
       body.innerHTML =
         '<p class="text-muted">购物车为空，去 <a href="#/products">商品页</a> 添加商品后再结算。</p>';
       msg.textContent = "暂无可结算商品";
+    }
+
+    function renderLoadError(err) {
+      var transient = isTransientError(err);
+      msg.className = "text-danger";
+      msg.textContent = transient ? "加载结算信息失败，可重试。" : err.message || "加载结算信息失败";
+      body.innerHTML =
+        '<div class="status-panel">' +
+        '<p class="text-danger">' +
+        esc(err && err.message ? err.message : "网络请求失败") +
+        "</p>" +
+        '<div class="row">' +
+        '<button id="checkout-retry-load" type="button">重试加载</button>' +
+        '<button id="checkout-to-cart" type="button">返回购物车</button>' +
+        "</div>" +
+        "</div>";
+      var retry = body.querySelector("#checkout-retry-load");
+      if (retry) {
+        retry.addEventListener("click", loadCheckoutData);
+      }
+      var toCart = body.querySelector("#checkout-to-cart");
+      if (toCart) {
+        toCart.addEventListener("click", function () {
+          context.navigate("/cart");
+        });
+      }
     }
 
     function renderCheckoutForm(cartPayload) {
@@ -764,6 +812,51 @@
         formatPrice(summary.total_amount_cents) +
         "</p>";
 
+      function submitOrder() {
+        msg.className = "text-muted";
+        msg.textContent = "提交订单中...";
+        context.api
+          .createOrder({})
+          .then(function (orderPayload) {
+            var order = orderPayload.order || {};
+            if (!order.id) {
+              throw new Error("订单创建成功但未返回订单号");
+            }
+            msg.textContent = "订单已创建，正在发起支付...";
+            return context.api.createPayment(order.id, "mockpay").then(function () {
+              context.navigate("/payments/" + order.id);
+            });
+          })
+          .catch(function (err) {
+            msg.className = "text-danger";
+            if (isTransientError(err)) {
+              msg.textContent = "提交订单失败，可能是网络波动，可直接重试。";
+              result.innerHTML =
+                '<div class="status-panel">' +
+                '<p class="text-danger">' +
+                esc(err.message || "网络请求失败") +
+                "</p>" +
+                '<div class="row">' +
+                '<button id="checkout-retry-submit" class="btn-primary" type="button">重试提交订单</button>' +
+                '<button id="checkout-back-cart" type="button">返回购物车</button>' +
+                "</div>" +
+                "</div>";
+              var retrySubmit = result.querySelector("#checkout-retry-submit");
+              if (retrySubmit) {
+                retrySubmit.addEventListener("click", submitOrder);
+              }
+              var backCart = result.querySelector("#checkout-back-cart");
+              if (backCart) {
+                backCart.addEventListener("click", function () {
+                  context.navigate("/cart");
+                });
+              }
+              return;
+            }
+            msg.textContent = err.message || "提交订单失败";
+          });
+      }
+
       body.querySelector("#checkout-preview").addEventListener("click", function () {
         var input = buildCheckoutPreviewInput({
           shipping_cents: body.querySelector("#checkout-shipping").value,
@@ -801,42 +894,30 @@
           })
           .catch(function (err) {
             msg.className = "text-danger";
+            if (isTransientError(err)) {
+              msg.textContent = "试算失败，网络可能波动，请重试。";
+              return;
+            }
             msg.textContent = err.message || "试算失败";
           });
       });
 
-      body.querySelector("#checkout-submit-order").addEventListener("click", function () {
-        msg.className = "text-muted";
-        msg.textContent = "提交订单中...";
-        context.api
-          .createOrder({})
-          .then(function (orderPayload) {
-            var order = orderPayload.order || {};
-            if (!order.id) {
-              throw new Error("订单创建成功但未返回订单号");
-            }
-            msg.textContent = "订单已创建，正在发起支付...";
-            return context.api.createPayment(order.id, "mockpay").then(function () {
-              context.navigate("/payments/" + order.id);
-            });
-          })
-          .catch(function (err) {
-            msg.className = "text-danger";
-            msg.textContent = err.message || "提交订单失败";
-          });
-      });
+      body.querySelector("#checkout-submit-order").addEventListener("click", submitOrder);
 
       msg.textContent = "请确认地址与费用参数。";
     }
 
-    context.api
-      .getCart()
-      .then(renderCheckoutForm)
-      .catch(function (err) {
-        msg.className = "text-danger";
-        msg.textContent = err.message || "加载结算信息失败";
-        body.innerHTML = "";
-      });
+    function loadCheckoutData() {
+      msg.className = "text-muted";
+      msg.textContent = "加载中...";
+      renderSkeleton();
+      context.api
+        .getCart()
+        .then(renderCheckoutForm)
+        .catch(renderLoadError);
+    }
+
+    loadCheckoutData();
   }
 
   function renderPayment(context) {
@@ -851,6 +932,43 @@
       "</div>";
     var msg = context.mount.querySelector("#payment-msg");
     var body = context.mount.querySelector("#payment-body");
+
+    function renderSkeleton() {
+      body.innerHTML =
+        '<div class="checkout-panel">' +
+        '<div class="skeleton-line w-30"></div>' +
+        '<div class="skeleton-line w-70"></div>' +
+        '<div class="skeleton-line w-90"></div>' +
+        "</div>";
+    }
+
+    function renderLoadError(err) {
+      var transient = isTransientError(err);
+      msg.className = "text-danger";
+      msg.textContent = transient ? "加载支付状态失败，可重试。" : err.message || "加载支付状态失败";
+      body.innerHTML =
+        '<div class="status-panel">' +
+        '<p class="text-danger">' +
+        esc(err && err.message ? err.message : "网络请求失败") +
+        "</p>" +
+        '<div class="row">' +
+        '<button id="payment-retry-load" type="button">重试加载</button>' +
+        '<button id="payment-back-checkout" type="button">返回结算页</button>' +
+        "</div>" +
+        "</div>";
+      var retry = body.querySelector("#payment-retry-load");
+      if (retry) {
+        retry.addEventListener("click", function () {
+          loadStatus(false);
+        });
+      }
+      var back = body.querySelector("#payment-back-checkout");
+      if (back) {
+        back.addEventListener("click", function () {
+          context.navigate("/checkout");
+        });
+      }
+    }
 
     function loadPaymentWithFallback() {
       return context.api.getPaymentByOrder(orderID).catch(function (err) {
@@ -924,6 +1042,7 @@
     function loadStatus(navigateWhenDone) {
       msg.className = "text-muted";
       msg.textContent = "刷新支付状态中...";
+      renderSkeleton();
       Promise.all([context.api.getOrder(orderID), loadPaymentWithFallback()])
         .then(function (parts) {
           var order = parts[0].order || {};
@@ -937,11 +1056,7 @@
           }
           msg.textContent = "可继续支付或查看结果。";
         })
-        .catch(function (err) {
-          msg.className = "text-danger";
-          msg.textContent = err.message || "加载支付状态失败";
-          body.innerHTML = "";
-        });
+        .catch(renderLoadError);
     }
 
     function triggerMockpay(result) {
@@ -958,6 +1073,10 @@
         })
         .catch(function (err) {
           msg.className = "text-danger";
+          if (isTransientError(err)) {
+            msg.textContent = "回调请求失败，网络可能波动，请重试。";
+            return;
+          }
           msg.textContent = err.message || "模拟支付回调失败";
         });
     }
@@ -976,6 +1095,41 @@
 
     var msg = context.mount.querySelector("#payment-result-msg");
     var body = context.mount.querySelector("#payment-result-body");
+
+    function renderSkeleton() {
+      body.innerHTML =
+        '<div class="checkout-panel">' +
+        '<div class="skeleton-line w-30"></div>' +
+        '<div class="skeleton-line w-70"></div>' +
+        '<div class="skeleton-line w-50"></div>' +
+        "</div>";
+    }
+
+    function renderLoadError(err) {
+      var transient = isTransientError(err);
+      msg.className = "text-danger";
+      msg.textContent = transient ? "加载支付结果失败，可重试。" : err.message || "加载支付结果失败";
+      body.innerHTML =
+        '<div class="status-panel">' +
+        '<p class="text-danger">' +
+        esc(err && err.message ? err.message : "网络请求失败") +
+        "</p>" +
+        '<div class="row">' +
+        '<button id="payment-result-retry-load" type="button">重试加载</button>' +
+        '<button id="payment-result-go-payment" type="button">返回支付页</button>' +
+        "</div>" +
+        "</div>";
+      var retry = body.querySelector("#payment-result-retry-load");
+      if (retry) {
+        retry.addEventListener("click", loadResult);
+      }
+      var back = body.querySelector("#payment-result-go-payment");
+      if (back) {
+        back.addEventListener("click", function () {
+          context.navigate("/payments/" + orderID);
+        });
+      }
+    }
 
     function loadPaymentWithFallback() {
       return context.api.getPaymentByOrder(orderID).catch(function (err) {
@@ -1050,15 +1204,12 @@
     function loadResult() {
       msg.className = "text-muted";
       msg.textContent = "加载中...";
+      renderSkeleton();
       Promise.all([context.api.getOrder(orderID), loadPaymentWithFallback()])
         .then(function (parts) {
           renderResult(parts[0].order || {}, parts[1].payment || null);
         })
-        .catch(function (err) {
-          msg.className = "text-danger";
-          msg.textContent = err.message || "加载支付结果失败";
-          body.innerHTML = "";
-        });
+        .catch(renderLoadError);
     }
 
     loadResult();
@@ -1525,5 +1676,6 @@
     filterOrdersByStatus: filterOrdersByStatus,
     paginateList: paginateList,
     isRefundableOrderStatus: isRefundableOrderStatus,
+    isTransientError: isTransientError,
   };
 })(window);

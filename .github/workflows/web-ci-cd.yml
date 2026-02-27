@@ -82,6 +82,20 @@ jobs:
       - name: Run Order Center Logic Test
         run: node tests/order_center_logic_test.js
 
+  resilience-logic-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run Resilience Logic Test
+        run: node tests/resilience_logic_test.js
+
   gate:
     runs-on: ubuntu-latest
     if: always()
@@ -91,6 +105,7 @@ jobs:
       - checkout-payload-test
       - payment-logic-test
       - order-center-logic-test
+      - resilience-logic-test
     steps:
       - name: Enforce Gate
         run: |
@@ -99,7 +114,8 @@ jobs:
                 "${{ needs.catalog-logic-test.result }}" != "success" || \
                 "${{ needs.checkout-payload-test.result }}" != "success" || \
                 "${{ needs.payment-logic-test.result }}" != "success" || \
-                "${{ needs.order-center-logic-test.result }}" != "success" ]]; then
+                "${{ needs.order-center-logic-test.result }}" != "success" || \
+                "${{ needs.resilience-logic-test.result }}" != "success" ]]; then
             echo "Gate failed."
             exit 1
           fi
