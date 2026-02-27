@@ -2,7 +2,7 @@
 
 语言：中文 | [English](README.md)
 
-`polaris-mall-web` 是 Polaris Mall 前端仓库，当前覆盖 W001-W007 能力。
+`polaris-mall-web` 是 Polaris Mall 前端仓库，当前覆盖 W001-W008 能力。
 
 ## 当前已实现
 
@@ -38,6 +38,10 @@
   - 首页与商品详情页接入运行时渲染预算检查
   - 结算/登录/注册/退款输入域补充 label 关联以提升可访问性
   - 新增 bundle 与运行时预算检测并接入 CI
+- W008 基线：
+  - 新增可复现 seed 的端到端冒烟脚本（`tests/e2e_smoke_test.js`）
+  - 覆盖主链路：浏览商品 -> 加入购物车 -> 提交订单 -> 查询订单
+  - 已接入 CI 门禁
 
 ## 本地运行
 
@@ -75,6 +79,14 @@ node .\tests\order_center_logic_test.js
 node .\tests\resilience_logic_test.js
 node .\tests\perf_budget_logic_test.js
 node .\tests\bundle_budget_test.js
+node .\tests\e2e_smoke_test.js
+```
+
+可选：设置种子后执行
+
+```powershell
+$env:SMOKE_SEED = "rc-001"
+node .\tests\e2e_smoke_test.js
 ```
 
 ## CI/CD Gate

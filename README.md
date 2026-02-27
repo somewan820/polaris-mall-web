@@ -2,7 +2,7 @@
 
 Language: English | [中文](README.zh-CN.md)
 
-`polaris-mall-web` contains the storefront shell baseline for W001-W007.
+`polaris-mall-web` contains the storefront shell baseline for W001-W008.
 
 ## Implemented In This Step
 
@@ -38,6 +38,10 @@ Language: English | [中文](README.zh-CN.md)
   - home and product-detail render include runtime budget check hooks
   - checkout/login/register/refund fields use explicit label-to-control association
   - added bundle-size and runtime-budget checks in CI
+- W008 verification baseline:
+  - added deterministic e2e smoke test (`tests/e2e_smoke_test.js`)
+  - smoke path covers browse -> add to cart -> order submit -> order query
+  - smoke test integrated into CI gate
 - starter pages:
   - home
   - product list (`/products`)
@@ -88,6 +92,14 @@ node .\tests\order_center_logic_test.js
 node .\tests\resilience_logic_test.js
 node .\tests\perf_budget_logic_test.js
 node .\tests\bundle_budget_test.js
+node .\tests\e2e_smoke_test.js
+```
+
+Optional seed override:
+
+```powershell
+$env:SMOKE_SEED = "rc-001"
+node .\tests\e2e_smoke_test.js
 ```
 
 ## CI/CD Gate

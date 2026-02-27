@@ -30,3 +30,7 @@
 - type: feature_pass
 - note: Marked W007 as passing. Evidence: 已完成性能与可访问性增强：首页/详情页渲染预算检查、关键表单 label 关联、bundle 与运行时预算测试接入；8组前端测试全部通过。
 
+## 2026-02-27T12:17:29Z
+- type: feature_pass
+- note: Marked W008 as passing. Evidence: 已新增端到端冒烟脚本（seed可复现）并接入CI门禁，覆盖浏览->加购->下单->查单主链路；9组测试全部通过。
+

@@ -124,6 +124,20 @@ jobs:
       - name: Run Bundle Budget Test
         run: node tests/bundle_budget_test.js
 
+  e2e-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run E2E Smoke Test
+        run: node tests/e2e_smoke_test.js
+
   gate:
     runs-on: ubuntu-latest
     if: always()
@@ -136,6 +150,7 @@ jobs:
       - resilience-logic-test
       - perf-budget-logic-test
       - bundle-budget-test
+      - e2e-smoke-test
     steps:
       - name: Enforce Gate
         run: |
@@ -147,7 +162,8 @@ jobs:
                 "${{ needs.order-center-logic-test.result }}" != "success" || \
                 "${{ needs.resilience-logic-test.result }}" != "success" || \
                 "${{ needs.perf-budget-logic-test.result }}" != "success" || \
-                "${{ needs.bundle-budget-test.result }}" != "success" ]]; then
+                "${{ needs.bundle-budget-test.result }}" != "success" || \
+                "${{ needs.e2e-smoke-test.result }}" != "success" ]]; then
             echo "Gate failed."
             exit 1
           fi
