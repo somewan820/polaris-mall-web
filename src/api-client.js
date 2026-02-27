@@ -103,6 +103,37 @@
       return request("/api/v1/admin/ping", { method: "GET" });
     }
 
+    function getCart() {
+      return request("/api/v1/cart", { method: "GET" });
+    }
+
+    function addCartItem(input) {
+      return request("/api/v1/cart/items", {
+        method: "POST",
+        body: input,
+      });
+    }
+
+    function updateCartItem(productID, quantity) {
+      return request("/api/v1/cart/items/" + encodeURIComponent(productID), {
+        method: "PATCH",
+        body: { quantity: quantity },
+      });
+    }
+
+    function removeCartItem(productID) {
+      return request("/api/v1/cart/items/" + encodeURIComponent(productID), {
+        method: "DELETE",
+      });
+    }
+
+    function checkoutPreview(input) {
+      return request("/api/v1/checkout/preview", {
+        method: "POST",
+        body: input,
+      });
+    }
+
     return {
       request: request,
       register: register,
@@ -110,6 +141,11 @@
       refreshSession: refreshSession,
       me: me,
       adminPing: adminPing,
+      getCart: getCart,
+      addCartItem: addCartItem,
+      updateCartItem: updateCartItem,
+      removeCartItem: removeCartItem,
+      checkoutPreview: checkoutPreview,
     };
   }
 
@@ -118,4 +154,3 @@
     createApiClient: createApiClient,
   };
 })(window);
-

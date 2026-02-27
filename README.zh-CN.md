@@ -2,7 +2,7 @@
 
 语言：中文 | [English](README.md)
 
-`polaris-mall-web` 是 Polaris Mall 前端仓库，当前覆盖 W001-W002 能力。
+`polaris-mall-web` 是 Polaris Mall 前端仓库，当前覆盖 W001-W003 能力。
 
 ## 当前已实现
 
@@ -17,6 +17,11 @@
   - 商品列表页分页
   - 商品详情页（价格、库存、分类、上架状态）
   - 商品筛选/分页纯逻辑测试
+- W003 基线：
+  - 商品列表页和详情页支持加入购物车
+  - 购物车页支持数量更新、删除、金额汇总
+  - 结算预览页支持地址选择与价格试算（`/api/v1/checkout/preview`）
+  - `/cart`、`/checkout` 路由要求登录
 
 ## 本地运行
 
@@ -42,6 +47,7 @@ window.POLARIS_API_BASE_URL = "http://127.0.0.1:9000";
 ```powershell
 node .\tests\router_guard_test.js
 node .\tests\catalog_logic_test.js
+node .\tests\checkout_payload_test.js
 ```
 
 ## CI/CD Gate

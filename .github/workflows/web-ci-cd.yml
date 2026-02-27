@@ -40,18 +40,34 @@ jobs:
       - name: Run Catalog Logic Test
         run: node tests/catalog_logic_test.js
 
+  checkout-payload-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run Checkout Payload Test
+        run: node tests/checkout_payload_test.js
+
   gate:
     runs-on: ubuntu-latest
     if: always()
     needs:
       - router-guard-test
       - catalog-logic-test
+      - checkout-payload-test
     steps:
       - name: Enforce Gate
         run: |
           set -euo pipefail
           if [[ "${{ needs.router-guard-test.result }}" != "success" || \
-                "${{ needs.catalog-logic-test.result }}" != "success" ]]; then
+                "${{ needs.catalog-logic-test.result }}" != "success" || \
+                "${{ needs.checkout-payload-test.result }}" != "success" ]]; then
             echo "Gate failed."
             exit 1
           fi

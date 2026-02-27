@@ -96,6 +96,29 @@ input {
   margin-bottom: 12px;
 }
 
+select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  background: #fff;
+}
+
+button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .row {
   display: flex;
   gap: 10px;
@@ -184,6 +207,46 @@ input {
   cursor: pointer;
 }
 
+.cart-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+}
+
+.cart-table th,
+.cart-table td {
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+.cart-table th {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.qty-input {
+  max-width: 90px;
+  margin: 0;
+}
+
+.checkout-panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: #fff;
+}
+
+.checkout-panel h3 {
+  margin-top: 0;
+}
+
+.checkout-panel p {
+  margin: 8px 0;
+}
+
 .text-muted {
   color: var(--muted);
 }
@@ -198,4 +261,31 @@ pre {
   border-radius: 8px;
   padding: 12px;
   background: #f8fafc;
+}
+
+@media (max-width: 720px) {
+  .cart-table,
+  .cart-table thead,
+  .cart-table tbody,
+  .cart-table tr,
+  .cart-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .cart-table thead {
+    display: none;
+  }
+
+  .cart-table tr {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    margin-bottom: 10px;
+  }
+
+  .cart-table td {
+    border: none;
+    padding: 6px 0;
+  }
 }

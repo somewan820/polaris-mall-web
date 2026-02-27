@@ -36,6 +36,7 @@
     if (!session.accessToken) {
       html.push(navLink("/login", "登录", activePath));
     } else {
+      html.push(navLink("/cart", "购物车", activePath));
       html.push(navLink("/account", "账号", activePath));
       if (session.user && session.user.role === "admin") {
         html.push(navLink("/admin", "管理探针", activePath));
@@ -88,6 +89,14 @@
     "/products/:id": {
       requiresAuth: false,
       render: Polaris.views.productDetail,
+    },
+    "/cart": {
+      requiresAuth: true,
+      render: Polaris.views.cart,
+    },
+    "/checkout": {
+      requiresAuth: true,
+      render: Polaris.views.checkout,
     },
     "/account": {
       requiresAuth: true,

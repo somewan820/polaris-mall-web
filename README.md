@@ -2,7 +2,7 @@
 
 Language: English | [中文](README.zh-CN.md)
 
-`polaris-mall-web` contains the storefront shell baseline for W001-W002.
+`polaris-mall-web` contains the storefront shell baseline for W001-W003.
 
 ## Implemented In This Step
 
@@ -17,10 +17,17 @@ Language: English | [中文](README.zh-CN.md)
   - product sort (name, price, stock)
   - product pagination
   - product detail card view (price, stock, category, shelf status)
+- W003 cart + checkout preview pages:
+  - add to cart from list and detail pages
+  - cart page supports quantity update/remove and summary amount
+  - checkout preview page supports address selection and pricing trial (`/api/v1/checkout/preview`)
+  - `/cart` and `/checkout` routes require login
 - starter pages:
   - home
   - product list (`/products`)
   - product detail (`/products/:id`)
+  - cart (`/cart`)
+  - checkout (`/checkout`)
   - login/register
   - account profile
   - admin probe
@@ -49,6 +56,7 @@ window.POLARIS_API_BASE_URL = "http://127.0.0.1:9000";
 ```powershell
 node .\tests\router_guard_test.js
 node .\tests\catalog_logic_test.js
+node .\tests\checkout_payload_test.js
 ```
 
 ## CI/CD Gate

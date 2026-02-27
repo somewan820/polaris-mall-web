@@ -15,6 +15,14 @@
     return n;
   }
 
+  function toNonNegativeInt(value) {
+    var n = Math.floor(toNumber(value));
+    if (n < 0) {
+      return 0;
+    }
+    return n;
+  }
+
   function formatPrice(cents) {
     return "¥" + (toNumber(cents) / 100).toFixed(2);
   }
@@ -155,8 +163,28 @@
     };
   }
 
-  function buildCatalogCard(item) {
+  function buildCheckoutPreviewInput(input) {
+    var source = input || {};
+    return {
+      shipping_cents: toNonNegativeInt(source.shipping_cents),
+      discount_cents: toNonNegativeInt(source.discount_cents),
+      coupon_code: String(source.coupon_code || "").trim(),
+    };
+  }
+
+  function buildCatalogCard(item, canAdd) {
     var stockClass = "stock-" + stockState(item.stock);
+    var addButton = "";
+    if (canAdd && item.stock > 0) {
+      addButton =
+        '<button type="button" class="btn-primary" data-add-product-id="' +
+        esc(item.id) +
+        '">加入购物车</button>';
+    } else if (!canAdd) {
+      addButton = '<a class="btn-link" href="#/login">登录后加入购物车</a>';
+    } else {
+      addButton = '<button type="button" disabled>暂不可购买</button>';
+    }
     return (
       '<article class="product-card">' +
       '<p class="product-category">' +
@@ -179,9 +207,12 @@
       " · " +
       stockStatusLabel(item.stock) +
       "</p>" +
+      '<div class="row">' +
       '<a class="btn-link" href="#/products/' +
       esc(item.id) +
       '">查看详情</a>' +
+      addButton +
+      "</div>" +
       "</article>"
     );
   }
@@ -190,12 +221,12 @@
     context.mount.innerHTML =
       '<div class="card">' +
       "<h2>欢迎来到 Polaris Mall</h2>" +
-      '<p class="text-muted">当前前端已完成路由、会话、权限守卫与商品浏览能力（W002）。</p>' +
+      '<p class="text-muted">当前前端已完成路由、会话、权限守卫、商品浏览与购物车结算预览能力（W003）。</p>' +
       "<ul>" +
-      "<li>商品页支持关键词筛选、分类筛选、排序和分页</li>" +
-      "<li>商品详情页展示价格、库存和分类等信息</li>" +
-      "<li>未登录访问 <code>/account</code> 会跳转到登录页</li>" +
-      "<li>非 admin 用户访问 <code>/admin</code> 会跳转到账号页</li>" +
+      "<li>商品页支持筛选、排序、分页与加入购物车</li>" +
+      "<li>购物车页支持修改数量、删除与汇总金额展示</li>" +
+      "<li>结算页支持地址选择与价格试算（接入 /api/v1/checkout/preview）</li>" +
+      "<li>未登录访问 <code>/cart</code> 与 <code>/checkout</code> 会跳转到登录页</li>" +
       "</ul>" +
       "</div>";
   }
@@ -205,6 +236,7 @@
       '<div class="card">' +
       "<h2>商品列表</h2>" +
       '<p id="catalog-meta" class="text-muted">加载中...</p>' +
+      '<p id="catalog-action-msg" class="text-muted"></p>' +
       '<div id="catalog-controls" class="catalog-controls" hidden>' +
       '<input id="catalog-keyword" type="text" placeholder="搜索商品名称或描述" />' +
       '<select id="catalog-category"></select>' +
@@ -229,6 +261,7 @@
       "</div>";
 
     var meta = context.mount.querySelector("#catalog-meta");
+    var actionMsg = context.mount.querySelector("#catalog-action-msg");
     var list = context.mount.querySelector("#catalog-list");
     var controls = context.mount.querySelector("#catalog-controls");
     var pager = context.mount.querySelector("#catalog-pager");
@@ -238,6 +271,7 @@
     var categorySelect = context.mount.querySelector("#catalog-category");
     var stockSelect = context.mount.querySelector("#catalog-stock");
     var sortSelect = context.mount.querySelector("#catalog-sort");
+    var canAdd = !!context.getSession().accessToken;
 
     context.api
       .request("/api/v1/products")
@@ -267,6 +301,26 @@
         }
         categorySelect.innerHTML = categoryOptions.join("");
 
+        function bindAddButtons() {
+          var addButtons = list.querySelectorAll("[data-add-product-id]");
+          for (var i = 0; i < addButtons.length; i += 1) {
+            addButtons[i].addEventListener("click", function (event) {
+              var productID = event.currentTarget.getAttribute("data-add-product-id");
+              actionMsg.className = "text-muted";
+              actionMsg.textContent = "加入中...";
+              context.api
+                .addCartItem({ product_id: productID, quantity: 1 })
+                .then(function () {
+                  actionMsg.textContent = "已加入购物车，可前往购物车继续操作。";
+                })
+                .catch(function (err) {
+                  actionMsg.className = "text-danger";
+                  actionMsg.textContent = err.message || "加入购物车失败";
+                });
+            });
+          }
+        }
+
         function renderFilteredList() {
           var filtered = applyCatalogQuery(items, query);
           var pageData = paginateCatalog(filtered, page, pageSize);
@@ -286,9 +340,12 @@
           } else {
             var html = [];
             for (var idx = 0; idx < pageData.items.length; idx += 1) {
-              html.push(buildCatalogCard(pageData.items[idx]));
+              html.push(buildCatalogCard(pageData.items[idx], canAdd));
             }
             list.innerHTML = html.join("");
+            if (canAdd) {
+              bindAddButtons();
+            }
           }
 
           controls.hidden = false;
@@ -319,6 +376,9 @@
           renderFilteredList();
         });
 
+        if (!canAdd) {
+          actionMsg.textContent = "登录后可直接加入购物车。";
+        }
         renderFilteredList();
       })
       .catch(function (err) {
@@ -330,16 +390,19 @@
 
   function renderProductDetail(context) {
     var productId = context.params.id;
+    var canAdd = !!context.getSession().accessToken;
     context.mount.innerHTML =
       '<div class="card">' +
       "<h2>商品详情</h2>" +
       '<p id="detail-msg" class="text-muted">加载中...</p>' +
       '<div id="detail-body"></div>' +
+      '<p id="detail-action-msg" class="text-muted"></p>' +
       '<a class="btn-link" href="#/products">返回商品列表</a>' +
       "</div>";
 
     var msg = context.mount.querySelector("#detail-msg");
     var body = context.mount.querySelector("#detail-body");
+    var actionMsg = context.mount.querySelector("#detail-action-msg");
     context.api
       .request("/api/v1/products/" + productId)
       .then(function (payload) {
@@ -371,11 +434,273 @@
           "<li>上架状态: " +
           esc(item.shelfStatus) +
           "</li>" +
-          "</ul>";
+          "</ul>" +
+          '<div class="row" id="detail-action-row"></div>';
+
+        var row = context.mount.querySelector("#detail-action-row");
+        if (!canAdd) {
+          row.innerHTML = '<a class="btn-link" href="#/login">登录后加入购物车</a>';
+          return;
+        }
+        if (item.stock <= 0) {
+          row.innerHTML = '<button type="button" disabled>暂不可购买</button>';
+          return;
+        }
+        row.innerHTML = '<button id="detail-add-cart" class="btn-primary" type="button">加入购物车</button>';
+        context.mount.querySelector("#detail-add-cart").addEventListener("click", function () {
+          actionMsg.className = "text-muted";
+          actionMsg.textContent = "加入中...";
+          context.api
+            .addCartItem({ product_id: item.id, quantity: 1 })
+            .then(function () {
+              actionMsg.textContent = "加入成功，可前往购物车查看。";
+            })
+            .catch(function (err) {
+              actionMsg.className = "text-danger";
+              actionMsg.textContent = err.message || "加入购物车失败";
+            });
+        });
       })
       .catch(function (err) {
         msg.className = "text-danger";
         msg.textContent = err.message || "加载失败";
+        body.innerHTML = "";
+      });
+  }
+
+  function renderCart(context) {
+    context.mount.innerHTML =
+      '<div class="card">' +
+      "<h2>购物车</h2>" +
+      '<p id="cart-msg" class="text-muted">加载中...</p>' +
+      '<div id="cart-body"></div>' +
+      "</div>";
+    var msg = context.mount.querySelector("#cart-msg");
+    var body = context.mount.querySelector("#cart-body");
+
+    function renderCartBody(payload) {
+      var items = payload.items || [];
+      var summary = payload.summary || {};
+      if (!items.length) {
+        body.innerHTML =
+          '<p class="text-muted">购物车为空，去 <a href="#/products">商品页</a> 添加商品吧。</p>';
+        msg.textContent = "暂无商品";
+        return;
+      }
+
+      var html = [];
+      html.push('<table class="cart-table"><thead><tr><th>商品</th><th>单价</th><th>数量</th><th>小计</th><th>操作</th></tr></thead><tbody>');
+      for (var i = 0; i < items.length; i += 1) {
+        var item = items[i];
+        html.push(
+          "<tr>" +
+            "<td>" +
+            esc(item.name) +
+            "</td>" +
+            "<td>" +
+            formatPrice(item.price_cents) +
+            "</td>" +
+            "<td><input class=\"qty-input\" data-qty-id=\"" +
+            esc(item.product_id) +
+            "\" type=\"number\" min=\"1\" value=\"" +
+            esc(item.quantity) +
+            "\" /></td>" +
+            "<td>" +
+            formatPrice(item.line_total_cents) +
+            "</td>" +
+            "<td>" +
+            '<button type="button" data-update-id="' +
+            esc(item.product_id) +
+            '">更新</button> ' +
+            '<button type="button" data-remove-id="' +
+            esc(item.product_id) +
+            '">删除</button>' +
+            "</td>" +
+            "</tr>"
+        );
+      }
+      html.push("</tbody></table>");
+      html.push(
+        '<div class="checkout-panel">' +
+          "<p>商品数: " +
+          esc(summary.total_items) +
+          "，总件数: " +
+          esc(summary.total_quantity) +
+          "</p>" +
+          "<p>合计: " +
+          formatPrice(summary.total_amount_cents) +
+          "</p>" +
+          '<button id="go-checkout" class="btn-primary" type="button">去结算页</button>' +
+          "</div>"
+      );
+      body.innerHTML = html.join("");
+      msg.textContent = "购物车已更新";
+
+      var updateButtons = body.querySelectorAll("[data-update-id]");
+      for (var u = 0; u < updateButtons.length; u += 1) {
+        updateButtons[u].addEventListener("click", function (event) {
+          var productID = event.currentTarget.getAttribute("data-update-id");
+          var qtyInput = body.querySelector('[data-qty-id="' + productID + '"]');
+          var qty = toNonNegativeInt(qtyInput && qtyInput.value);
+          if (qty <= 0) {
+            msg.className = "text-danger";
+            msg.textContent = "数量必须大于 0";
+            return;
+          }
+          msg.className = "text-muted";
+          msg.textContent = "更新中...";
+          context.api
+            .updateCartItem(productID, qty)
+            .then(loadCart)
+            .catch(function (err) {
+              msg.className = "text-danger";
+              msg.textContent = err.message || "更新购物车失败";
+            });
+        });
+      }
+
+      var removeButtons = body.querySelectorAll("[data-remove-id]");
+      for (var r = 0; r < removeButtons.length; r += 1) {
+        removeButtons[r].addEventListener("click", function (event) {
+          var productID = event.currentTarget.getAttribute("data-remove-id");
+          msg.className = "text-muted";
+          msg.textContent = "删除中...";
+          context.api
+            .removeCartItem(productID)
+            .then(loadCart)
+            .catch(function (err) {
+              msg.className = "text-danger";
+              msg.textContent = err.message || "删除购物车失败";
+            });
+        });
+      }
+
+      var checkoutButton = body.querySelector("#go-checkout");
+      if (checkoutButton) {
+        checkoutButton.addEventListener("click", function () {
+          context.navigate("/checkout");
+        });
+      }
+    }
+
+    function loadCart() {
+      context.api
+        .getCart()
+        .then(renderCartBody)
+        .catch(function (err) {
+          msg.className = "text-danger";
+          msg.textContent = err.message || "加载购物车失败";
+          body.innerHTML = "";
+        });
+    }
+
+    loadCart();
+  }
+
+  function renderCheckout(context) {
+    context.mount.innerHTML =
+      '<div class="card">' +
+      "<h2>结算预览</h2>" +
+      '<p id="checkout-msg" class="text-muted">加载中...</p>' +
+      '<div id="checkout-body"></div>' +
+      "</div>";
+    var msg = context.mount.querySelector("#checkout-msg");
+    var body = context.mount.querySelector("#checkout-body");
+
+    function renderEmpty() {
+      body.innerHTML =
+        '<p class="text-muted">购物车为空，去 <a href="#/products">商品页</a> 添加商品后再结算。</p>';
+      msg.textContent = "暂无可结算商品";
+    }
+
+    function renderCheckoutForm(cartPayload) {
+      var summary = (cartPayload && cartPayload.summary) || {};
+      if (!summary.total_items) {
+        renderEmpty();
+        return;
+      }
+
+      body.innerHTML =
+        '<div class="checkout-panel">' +
+        "<h3>收货地址</h3>" +
+        '<select id="checkout-address">' +
+        '<option value="上海市-浦东新区-演示地址">上海市 浦东新区 演示地址</option>' +
+        '<option value="北京市-朝阳区-演示地址">北京市 朝阳区 演示地址</option>' +
+        '<option value="广州市-天河区-演示地址">广州市 天河区 演示地址</option>' +
+        "</select>" +
+        "<h3>费用参数</h3>" +
+        '<label class="label">运费（分）</label>' +
+        '<input id="checkout-shipping" type="number" min="0" value="0" />' +
+        '<label class="label">优惠（分）</label>' +
+        '<input id="checkout-discount" type="number" min="0" value="0" />' +
+        '<label class="label">优惠码</label>' +
+        '<input id="checkout-coupon" type="text" value="" placeholder="可选" />' +
+        '<button id="checkout-preview" class="btn-primary" type="button">试算金额</button>' +
+        '<div id="checkout-result" class="card"></div>' +
+        "</div>";
+
+      var result = body.querySelector("#checkout-result");
+      result.innerHTML =
+        "<p>购物车商品数: " +
+        esc(summary.total_items) +
+        "</p>" +
+        "<p>购物车总件数: " +
+        esc(summary.total_quantity) +
+        "</p>" +
+        "<p>商品小计: " +
+        formatPrice(summary.total_amount_cents) +
+        "</p>";
+
+      body.querySelector("#checkout-preview").addEventListener("click", function () {
+        var input = buildCheckoutPreviewInput({
+          shipping_cents: body.querySelector("#checkout-shipping").value,
+          discount_cents: body.querySelector("#checkout-discount").value,
+          coupon_code: body.querySelector("#checkout-coupon").value,
+        });
+        var address = body.querySelector("#checkout-address").value;
+        msg.className = "text-muted";
+        msg.textContent = "试算中...";
+        context.api
+          .checkoutPreview(input)
+          .then(function (payload) {
+            var pricing = payload.pricing || {};
+            result.innerHTML =
+              "<h3>试算结果</h3>" +
+              "<p>收货地址: " +
+              esc(address) +
+              "</p>" +
+              "<p>商品小计: " +
+              formatPrice(pricing.subtotal_cents) +
+              "</p>" +
+              "<p>运费: " +
+              formatPrice(pricing.shipping_cents) +
+              "</p>" +
+              "<p>优惠: " +
+              formatPrice(pricing.discount_cents) +
+              "</p>" +
+              "<p><strong>应付总额: " +
+              formatPrice(pricing.total_cents) +
+              "</strong></p>" +
+              "<p class=\"text-muted\">trace_id: " +
+              esc(payload.trace_id) +
+              "</p>";
+            msg.textContent = "试算完成，可继续下单流程。";
+          })
+          .catch(function (err) {
+            msg.className = "text-danger";
+            msg.textContent = err.message || "试算失败";
+          });
+      });
+
+      msg.textContent = "请确认地址与费用参数。";
+    }
+
+    context.api
+      .getCart()
+      .then(renderCheckoutForm)
+      .catch(function (err) {
+        msg.className = "text-danger";
+        msg.textContent = err.message || "加载结算信息失败";
         body.innerHTML = "";
       });
   }
@@ -542,6 +867,8 @@
     home: renderHome,
     catalog: renderCatalog,
     productDetail: renderProductDetail,
+    cart: renderCart,
+    checkout: renderCheckout,
     login: renderLogin,
     account: renderAccount,
     admin: renderAdmin,
@@ -553,5 +880,6 @@
     paginateCatalog: paginateCatalog,
     stockState: stockState,
     stockStatusLabel: stockStatusLabel,
+    buildCheckoutPreviewInput: buildCheckoutPreviewInput,
   };
 })(window);

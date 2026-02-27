@@ -10,3 +10,7 @@
 - type: feature_pass
 - note: Marked W002 as passing. Evidence: 已实现商品列表筛选/排序/分页与商品详情展示，router_guard_test 与 catalog_logic_test 均通过。
 
+## 2026-02-27T09:43:14Z
+- type: feature_pass
+- note: Marked W003 as passing. Evidence: 已实现购物车与结算预览页面：支持加入购物车、数量调整、删除、金额汇总与试算，router_guard_test/catalog_logic_test/checkout_payload_test 全部通过。
+
