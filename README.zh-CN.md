@@ -2,7 +2,7 @@
 
 语言：中文 | [English](README.md)
 
-`polaris-mall-web` 是 Polaris Mall 前端仓库，当前覆盖 W001-W006 能力。
+`polaris-mall-web` 是 Polaris Mall 前端仓库，当前覆盖 W001-W007 能力。
 
 ## 当前已实现
 
@@ -34,6 +34,10 @@
   - 结算页/支付页/支付结果页补充加载骨架状态
   - 网络抖动等瞬时失败场景支持一键重试
   - 不可恢复失败场景提供明确回退路径
+- W007 基线：
+  - 首页与商品详情页接入运行时渲染预算检查
+  - 结算/登录/注册/退款输入域补充 label 关联以提升可访问性
+  - 新增 bundle 与运行时预算检测并接入 CI
 
 ## 本地运行
 
@@ -69,6 +73,8 @@ node .\tests\checkout_payload_test.js
 node .\tests\payment_logic_test.js
 node .\tests\order_center_logic_test.js
 node .\tests\resilience_logic_test.js
+node .\tests\perf_budget_logic_test.js
+node .\tests\bundle_budget_test.js
 ```
 
 ## CI/CD Gate

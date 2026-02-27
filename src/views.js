@@ -261,6 +261,25 @@
     return status === 408 || status === 429 || status >= 500;
   }
 
+  function nowMs() {
+    if (global.performance && typeof global.performance.now === "function") {
+      return global.performance.now();
+    }
+    return Date.now();
+  }
+
+  function isRenderWithinBudget(durationMs, budgetMs) {
+    return toNumber(durationMs) <= toNumber(budgetMs);
+  }
+
+  function trackRenderBudget(label, startTimeMs, budgetMs) {
+    var duration = nowMs() - toNumber(startTimeMs);
+    if (!isRenderWithinBudget(duration, budgetMs) && global.console && typeof global.console.warn === "function") {
+      global.console.warn("[perf-budget] " + label + " render took " + duration.toFixed(1) + "ms, budget=" + budgetMs + "ms");
+    }
+    return duration;
+  }
+
   function encodeHex(bytes) {
     var output = [];
     for (var i = 0; i < bytes.length; i += 1) {
@@ -337,6 +356,7 @@
   }
 
   function renderHome(context) {
+    var renderStart = nowMs();
     context.mount.innerHTML =
       '<div class="card">' +
       "<h2>欢迎来到 Polaris Mall</h2>" +
@@ -351,6 +371,7 @@
       "<li>未登录访问 <code>/cart</code>、<code>/checkout</code>、<code>/orders</code> 会跳转到登录页</li>" +
       "</ul>" +
       "</div>";
+    trackRenderBudget("home", renderStart, 40);
   }
 
   function renderCatalog(context) {
@@ -513,6 +534,7 @@
   function renderProductDetail(context) {
     var productId = context.params.id;
     var canAdd = !!context.getSession().accessToken;
+    var renderStart = nowMs();
     context.mount.innerHTML =
       '<div class="card">' +
       "<h2>商品详情</h2>" +
@@ -582,11 +604,13 @@
               actionMsg.textContent = err.message || "加入购物车失败";
             });
         });
+        trackRenderBudget("productDetail", renderStart, 800);
       })
       .catch(function (err) {
         msg.className = "text-danger";
         msg.textContent = err.message || "加载失败";
         body.innerHTML = "";
+        trackRenderBudget("productDetail", renderStart, 800);
       });
   }
 
@@ -787,11 +811,11 @@
         '<option value="广州市-天河区-演示地址">广州市 天河区 演示地址</option>' +
         "</select>" +
         "<h3>费用参数</h3>" +
-        '<label class="label">运费（分）</label>' +
+        '<label class="label" for="checkout-shipping">运费（分）</label>' +
         '<input id="checkout-shipping" type="number" min="0" value="0" />' +
-        '<label class="label">优惠（分）</label>' +
+        '<label class="label" for="checkout-discount">优惠（分）</label>' +
         '<input id="checkout-discount" type="number" min="0" value="0" />' +
-        '<label class="label">优惠码</label>' +
+        '<label class="label" for="checkout-coupon">优惠码</label>' +
         '<input id="checkout-coupon" type="text" value="" placeholder="可选" />' +
         '<div class="row">' +
         '<button id="checkout-preview" class="btn-primary" type="button">试算金额</button>' +
@@ -903,6 +927,23 @@
       });
 
       body.querySelector("#checkout-submit-order").addEventListener("click", submitOrder);
+
+      function bindEnterToPreview(selector) {
+        var field = body.querySelector(selector);
+        if (!field) {
+          return;
+        }
+        field.addEventListener("keydown", function (event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            body.querySelector("#checkout-preview").click();
+          }
+        });
+      }
+
+      bindEnterToPreview("#checkout-shipping");
+      bindEnterToPreview("#checkout-discount");
+      bindEnterToPreview("#checkout-coupon");
 
       msg.textContent = "请确认地址与费用参数。";
     }
@@ -1424,9 +1465,9 @@
         html.push("<p>退款金额: " + formatPrice(refund.amount_cents) + "</p>");
         html.push("<p>退款原因: " + esc(refund.reason) + "</p>");
       } else if (isRefundableOrderStatus(order.status)) {
-        html.push('<label class="label">退款金额（分，留空按全额）</label>');
+        html.push('<label class="label" for="refund-amount">退款金额（分，留空按全额）</label>');
         html.push('<input id="refund-amount" type="number" min="0" value="" placeholder="例如 1000" />');
-        html.push('<label class="label">退款原因</label>');
+        html.push('<label class="label" for="refund-reason">退款原因</label>');
         html.push('<input id="refund-reason" type="text" value="buyer_request" />');
         html.push('<button id="refund-submit" class="btn-primary" type="button">提交退款申请</button>');
       } else {
@@ -1495,10 +1536,10 @@
       '<div class="card">' +
       "<h2>登录</h2>" +
       '<form id="login-form">' +
-      '<label class="label">邮箱</label>' +
-      '<input name="email" type="email" required placeholder="buyer@example.com" />' +
-      '<label class="label">密码</label>' +
-      '<input name="password" type="password" required placeholder="请输入密码" />' +
+      '<label class="label" for="login-email">邮箱</label>' +
+      '<input id="login-email" name="email" type="email" required placeholder="buyer@example.com" />' +
+      '<label class="label" for="login-password">密码</label>' +
+      '<input id="login-password" name="password" type="password" required placeholder="请输入密码" />' +
       '<button class="btn-primary" type="submit">登录</button>' +
       '<p id="login-msg" class="text-danger"></p>' +
       "</form>" +
@@ -1506,12 +1547,12 @@
       '<div class="card">' +
       "<h3>快速注册</h3>" +
       '<form id="register-form">' +
-      '<label class="label">邮箱</label>' +
-      '<input name="email" type="email" required placeholder="new@example.com" />' +
-      '<label class="label">密码</label>' +
-      '<input name="password" type="password" required placeholder="请输入密码" />' +
-      '<label class="label">角色</label>' +
-      '<input name="role" type="text" value="buyer" placeholder="buyer/admin/ops" />' +
+      '<label class="label" for="register-email">邮箱</label>' +
+      '<input id="register-email" name="email" type="email" required placeholder="new@example.com" />' +
+      '<label class="label" for="register-password">密码</label>' +
+      '<input id="register-password" name="password" type="password" required placeholder="请输入密码" />' +
+      '<label class="label" for="register-role">角色</label>' +
+      '<input id="register-role" name="role" type="text" value="buyer" placeholder="buyer/admin/ops" />' +
       '<button class="btn-primary" type="submit">注册</button>' +
       '<p id="register-msg" class="text-danger"></p>' +
       "</form>" +
@@ -1677,5 +1718,6 @@
     paginateList: paginateList,
     isRefundableOrderStatus: isRefundableOrderStatus,
     isTransientError: isTransientError,
+    isRenderWithinBudget: isRenderWithinBudget,
   };
 })(window);

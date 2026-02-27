@@ -26,3 +26,7 @@
 - type: feature_pass
 - note: Marked W006 as passing. Evidence: 已增强关键结算链路容错：结算页/支付页/支付结果页新增加载骨架、瞬时失败重试与回退引导，6组前端测试全部通过。
 
+## 2026-02-27T12:08:03Z
+- type: feature_pass
+- note: Marked W007 as passing. Evidence: 已完成性能与可访问性增强：首页/详情页渲染预算检查、关键表单 label 关联、bundle 与运行时预算测试接入；8组前端测试全部通过。
+

@@ -2,7 +2,7 @@
 
 Language: English | [中文](README.zh-CN.md)
 
-`polaris-mall-web` contains the storefront shell baseline for W001-W006.
+`polaris-mall-web` contains the storefront shell baseline for W001-W007.
 
 ## Implemented In This Step
 
@@ -34,6 +34,10 @@ Language: English | [中文](README.zh-CN.md)
   - checkout/payment/result pages include loading skeleton state
   - transient failures provide direct retry actions
   - unrecoverable failures provide explicit fallback navigation
+- W007 performance + accessibility baseline:
+  - home and product-detail render include runtime budget check hooks
+  - checkout/login/register/refund fields use explicit label-to-control association
+  - added bundle-size and runtime-budget checks in CI
 - starter pages:
   - home
   - product list (`/products`)
@@ -82,6 +86,8 @@ node .\tests\checkout_payload_test.js
 node .\tests\payment_logic_test.js
 node .\tests\order_center_logic_test.js
 node .\tests\resilience_logic_test.js
+node .\tests\perf_budget_logic_test.js
+node .\tests\bundle_budget_test.js
 ```
 
 ## CI/CD Gate
