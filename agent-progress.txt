@@ -6,3 +6,7 @@
 - type: feature_pass
 - note: Marked W001 as passing. Evidence: Implemented shell routes, session persistence, API client and route guards; router guard tests passed via node.
 
+## 2026-02-27T08:59:31Z
+- type: feature_pass
+- note: Marked W002 as passing. Evidence: 已实现商品列表筛选/排序/分页与商品详情展示，router_guard_test 与 catalog_logic_test 均通过。
+

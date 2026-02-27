@@ -1,108 +1,110 @@
 [
   {
-    "category": "foundation", 
-    "passes": true, 
-    "description": "Build storefront shell with routing, session handling, and API client baseline", 
-    "notes": "Acceptance: app shell runs and protected routes enforce login. Dependencies: A001.", 
-    "updated_at": "2026-02-27T05:49:56Z", 
-    "evidence": "Implemented shell routes, session persistence, API client and route guards; router guard tests passed via node.", 
-    "priority": 1, 
+    "id": "W001",
+    "priority": 1,
+    "category": "foundation",
+    "description": "Build storefront shell with routing, session handling, and API client baseline",
     "steps": [
-      "Define app layout and route skeleton", 
-      "Implement login state persistence and route guard", 
+      "Define app layout and route skeleton",
+      "Implement login state persistence and route guard",
       "Create shared API request wrapper and error normalization"
-    ], 
-    "id": "W001"
-  }, 
+    ],
+    "passes": true,
+    "evidence": "Implemented shell routes, session persistence, API client and route guards; router guard tests passed via node.",
+    "updated_at": "2026-02-27T05:49:56Z",
+    "notes": "Acceptance: app shell runs and protected routes enforce login. Dependencies: A001."
+  },
   {
-    "category": "catalog", 
-    "passes": false, 
-    "description": "Implement product list, filter, sort, and product detail pages", 
-    "notes": "Acceptance: shopper can discover products and open detail page. Dependencies: W001, A002.", 
-    "priority": 2, 
+    "id": "W002",
+    "priority": 2,
+    "category": "catalog",
+    "description": "Implement product list, filter, sort, and product detail pages",
     "steps": [
-      "Render category and product listing with pagination", 
-      "Support basic filter and sort conditions", 
+      "Render category and product listing with pagination",
+      "Support basic filter and sort conditions",
       "Render product detail with price and stock status"
-    ], 
-    "id": "W002"
-  }, 
+    ],
+    "passes": true,
+    "notes": "\u5546\u54c1\u5217\u8868\u652f\u6301\u5173\u952e\u8bcd\u3001\u5206\u7c7b\u3001\u5e93\u5b58\u7b5b\u9009\u53ca\u591a\u7ef4\u6392\u5e8f\uff0c\u8be6\u60c5\u9875\u663e\u793a\u4ef7\u683c\u4e0e\u5e93\u5b58\u72b6\u6001\u3002",
+    "evidence": "\u5df2\u5b9e\u73b0\u5546\u54c1\u5217\u8868\u7b5b\u9009/\u6392\u5e8f/\u5206\u9875\u4e0e\u5546\u54c1\u8be6\u60c5\u5c55\u793a\uff0crouter_guard_test \u4e0e catalog_logic_test \u5747\u901a\u8fc7\u3002",
+    "updated_at": "2026-02-27T08:59:31Z"
+  },
   {
-    "category": "cart", 
-    "passes": false, 
-    "description": "Implement cart and checkout pages connected to server-side cart and pricing APIs", 
-    "notes": "Acceptance: shopper can reach checkout with accurate totals. Dependencies: W002, A003, A004.", 
-    "priority": 3, 
+    "id": "W003",
+    "priority": 3,
+    "category": "cart",
+    "description": "Implement cart and checkout pages connected to server-side cart and pricing APIs",
     "steps": [
-      "Support add to cart and quantity adjustment", 
-      "Show per-item and aggregate pricing breakdown", 
+      "Support add to cart and quantity adjustment",
+      "Show per-item and aggregate pricing breakdown",
       "Allow address selection before placing order"
-    ], 
-    "id": "W003"
-  }, 
+    ],
+    "passes": false,
+    "notes": "Acceptance: shopper can reach checkout with accurate totals. Dependencies: W002, A003, A004."
+  },
   {
-    "category": "order", 
-    "passes": false, 
-    "description": "Implement order submit, payment initiation, and payment result flow", 
-    "notes": "Acceptance: shopper can place an order and see payment outcome. Dependencies: W003, A005, A006.", 
-    "priority": 4, 
+    "id": "W004",
+    "priority": 4,
+    "category": "order",
+    "description": "Implement order submit, payment initiation, and payment result flow",
     "steps": [
-      "Create order submit action from checkout page", 
-      "Display payment redirect or QR flow", 
+      "Create order submit action from checkout page",
+      "Display payment redirect or QR flow",
       "Render success and failure status pages with retry entry"
-    ], 
-    "id": "W004"
-  }, 
+    ],
+    "passes": false,
+    "notes": "Acceptance: shopper can place an order and see payment outcome. Dependencies: W003, A005, A006."
+  },
   {
-    "category": "account", 
-    "passes": false, 
-    "description": "Implement user center pages for order history, order detail, and refund requests", 
-    "notes": "Acceptance: user can self-serve order and refund queries. Dependencies: W004, A007.", 
-    "priority": 5, 
+    "id": "W005",
+    "priority": 5,
+    "category": "account",
+    "description": "Implement user center pages for order history, order detail, and refund requests",
     "steps": [
-      "Render paginated order list with status filters", 
-      "Render order detail with shipment and timeline", 
+      "Render paginated order list with status filters",
+      "Render order detail with shipment and timeline",
       "Provide refund apply form and status display"
-    ], 
-    "id": "W005"
-  }, 
+    ],
+    "passes": false,
+    "notes": "Acceptance: user can self-serve order and refund queries. Dependencies: W004, A007."
+  },
   {
-    "category": "resilience", 
-    "passes": false, 
-    "description": "Implement robust loading, retry, and failure-state UX for critical checkout flows", 
-    "notes": "Acceptance: critical pages remain usable during transient API failures. Dependencies: W003, W004.", 
-    "priority": 6, 
+    "id": "W006",
+    "priority": 6,
+    "category": "resilience",
+    "description": "Implement robust loading, retry, and failure-state UX for critical checkout flows",
     "steps": [
-      "Add skeleton and pending states for async requests", 
-      "Add recoverable retry patterns for transient failures", 
+      "Add skeleton and pending states for async requests",
+      "Add recoverable retry patterns for transient failures",
       "Provide actionable fallback UI for non-recoverable errors"
-    ], 
-    "id": "W006"
-  }, 
+    ],
+    "passes": false,
+    "notes": "Acceptance: critical pages remain usable during transient API failures. Dependencies: W003, W004."
+  },
   {
-    "category": "quality", 
-    "passes": false, 
-    "description": "Improve frontend performance and accessibility for the top purchase journey", 
-    "notes": "Acceptance: target page budgets and basic accessibility checks pass. Dependencies: W002, W003.", 
-    "priority": 7, 
+    "id": "W007",
+    "priority": 7,
+    "category": "quality",
+    "description": "Improve frontend performance and accessibility for the top purchase journey",
     "steps": [
-      "Measure and optimize first contentful render for home and detail pages", 
-      "Ensure keyboard navigation and form labels for checkout", 
+      "Measure and optimize first contentful render for home and detail pages",
+      "Ensure keyboard navigation and form labels for checkout",
       "Add bundle and runtime budget checks"
-    ], 
-    "id": "W007"
-  }, 
+    ],
+    "passes": false,
+    "notes": "Acceptance: target page budgets and basic accessibility checks pass. Dependencies: W002, W003."
+  },
   {
-    "category": "verification", 
-    "passes": false, 
-    "description": "Add end-to-end smoke tests covering browse, add to cart, order submit, and order query", 
-    "notes": "Acceptance: one-click smoke suite validates MVP flow on each release candidate. Dependencies: W004, W005, I005.", 
-    "priority": 8, 
+    "id": "W008",
+    "priority": 8,
+    "category": "verification",
+    "description": "Add end-to-end smoke tests covering browse, add to cart, order submit, and order query",
     "steps": [
-      "Create test seed strategy for deterministic data", 
-      "Implement smoke scenarios for main customer journey", 
+      "Create test seed strategy for deterministic data",
+      "Implement smoke scenarios for main customer journey",
       "Integrate smoke tests into CI gate"
-    ], 
-    "id": "W008"
+    ],
+    "passes": false,
+    "notes": "Acceptance: one-click smoke suite validates MVP flow on each release candidate. Dependencies: W004, W005, I005."
   }
 ]

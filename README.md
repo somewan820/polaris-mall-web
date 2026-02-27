@@ -1,6 +1,8 @@
 # Polaris Mall Web
 
-`polaris-mall-web` contains the storefront shell baseline for W001.
+Language: English | [中文](README.zh-CN.md)
+
+`polaris-mall-web` contains the storefront shell baseline for W001-W002.
 
 ## Implemented In This Step
 
@@ -10,6 +12,11 @@
 - route guards:
   - `/account` requires login
   - `/admin` requires admin role
+- W002 catalog pages:
+  - product list with keyword/category/stock filter
+  - product sort (name, price, stock)
+  - product pagination
+  - product detail card view (price, stock, category, shelf status)
 - starter pages:
   - home
   - product list (`/products`)
@@ -41,4 +48,5 @@ window.POLARIS_API_BASE_URL = "http://127.0.0.1:9000";
 
 ```powershell
 node .\tests\router_guard_test.js
+node .\tests\catalog_logic_test.js
 ```
