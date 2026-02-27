@@ -43,3 +43,8 @@ window.POLARIS_API_BASE_URL = "http://127.0.0.1:9000";
 node .\tests\router_guard_test.js
 node .\tests\catalog_logic_test.js
 ```
+
+## CI/CD Gate
+
+- 工作流文件：`.github/workflows/web-ci-cd.yml`
+- 部署任务仅在 `main` 分支 push 且 `gate` 成功后执行

@@ -50,3 +50,8 @@ window.POLARIS_API_BASE_URL = "http://127.0.0.1:9000";
 node .\tests\router_guard_test.js
 node .\tests\catalog_logic_test.js
 ```
+
+## CI/CD Gate
+
+- workflow file: `.github/workflows/web-ci-cd.yml`
+- deploy job runs only on `push` to `main` and only after `gate` success
